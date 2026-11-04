@@ -1,0 +1,67 @@
+name: api
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "api/**"
+      - "docker-compose.yml"
+      - ".env.example"
+      - ".github/workflows/api.yml"
+  pull_request:
+    paths:
+      - "api/**"
+      - "docker-compose.yml"
+      - ".env.example"
+      - ".github/workflows/api.yml"
+
+concurrency:
+  group: api-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: api
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          version: "0.11.3"
+      - run: uv sync --frozen
+      - run: uv run ruff check .
+      - run: uv run ruff format --check .
+
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Preparar .env de pruebas
+        run: cp .env.example .env
+      - name: Construir imágenes
+        run: docker compose build api storage-init
+      - name: Pruebas contra PostgreSQL y MinIO reales
+        run: docker compose run --rm api pytest --cov=app --cov-report=term-missing
+      - name: Logs si algo falla
+        if: failure()
+        run: docker compose logs
+      - name: Bajar servicios
+        if: always()
+        run: docker compose down -v
+
+  image:
+    runs-on: ubuntu-latest
+    needs: [lint, test]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Construir la imagen de producción
+        run: docker build --target prod -t mandidog-api:ci ./api
+      - name: La API no arranca en modo dev con ENV=production
+        run: |
+          cp .env.example .env
+          if docker run --rm --env-file .env -e ENV=production -e RUN_MIGRATIONS=false \
+               mandidog-api:ci; then
+            echo "La API arrancó con AUTH_MODE=dev en producción" && exit 1
+          fi
