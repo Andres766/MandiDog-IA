@@ -20,11 +20,10 @@ android {
     }
 
     defaultConfig {
-        // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
+        // Identificador permanente: está registrado en Firebase y en AI for Pet.
         applicationId = "co.edu.ucc.mandidog"
-        // You can update the following values to match your application needs.
-        // For more information, see: https://flutter.dev/to/review-gradle-config.
-        minSdk = flutter.minSdkVersion
+        // El SDK de AI for Pet requiere Android 9.0 o superior.
+        minSdk = 28
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
@@ -37,6 +36,12 @@ android {
             signingConfig = signingConfigs.getByName("debug")
         }
     }
+}
+
+dependencies {
+    // SDK de AI for Pet. Si cambias la versión, actualiza también AppConfig.aiforpetSdkVersion.
+    // Trae sus propias reglas de ProGuard/R8 para las builds de release.
+    implementation("io.github.aiforpet-ttcare:scansdk-lib:2.2.3")
 }
 
 flutter {
