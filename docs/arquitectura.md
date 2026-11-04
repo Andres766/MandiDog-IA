@@ -103,6 +103,16 @@ El SDK cambia la clave publicable por un token de corta duración en el *Token B
 for Pet y con ese token envía la foto. La interfaz del SDK está en coreano, inglés,
 japonés, italiano, sueco o tailandés; **no tiene español**.
 
+### Prueba real (2026-11-04)
+
+Primer escaneo real en un Galaxy S25 Ultra (Android 17) con la clave de prueba, eligiendo la
+foto desde la galería del SDK. El SDK aceptó la foto, la analizó en los servidores de AI for
+Pet y la app registró el resultado en la API local: `WARNING` → rojo, posición `TLEFT`,
+`inflammation` y `calculus` con nivel 1 (anormal). El JSON real trajo `status`, `petType`,
+`part`, `subPart`, `positionCode`, `createdAt` y `response` (`status`, `title`,
+`analyzedDate`, `description`, `symptoms` con `abnormLevel`, `abnormalLevel`, `isAbnormal`,
+`resultLabel`, `cropImageUrl`, `heatmapUrl`, `details`). No trajo `userId` ni `petId`.
+
 ## 4. Interpretación del resultado
 
 `api/app/services/aiforpet.py` aplica el contrato documentado por AI for Pet:
@@ -131,12 +141,14 @@ japonés, italiano, sueco o tailandés; **no tiene español**.
 2. Que la mascota sea del usuario (404 `pet_not_found`).
 3. Que el JSON sea un escaneo dental de perro terminado (`SUCCESS`, `DOG`, `TOOTH`, estado
    conocido, máximo 64 KB) (422 `scan_result_invalid`).
-4. Que `userId` y `petId` del resultado sean los del usuario y la mascota (422
-   `scan_result_mismatch`).
+4. Que `userId` y `petId` del resultado, **si vienen**, sean los del usuario y la mascota
+   (422 `scan_result_mismatch`). En la prueba real con el SDK 2.2.3 (2026-11-04) el JSON
+   **no los devolvió**, aunque la app se los pasa al abrir la cámara; por ahora esta
+   verificación no se aplica en la práctica.
 5. Que el `client_scan_id` no se haya usado con otros datos (409 `scan_id_conflict`).
 
 **Limitación conocida:** la API no puede comprobar criptográficamente que el JSON lo generó
-AI for Pet; lo reporta la app. La consola de AI for Pet ofrece un *Webhook URL* para recibir
+AI for Pet ni a qué escaneo corresponde; lo reporta la app. La consola de AI for Pet ofrece un *Webhook URL* para recibir
 resultados directamente de sus servidores; es la mejora natural cuando se publique su
 formato. La base de datos además exige que el semáforo corresponda al estado del proveedor
 (`ck_analyses_risk_matches_status`).

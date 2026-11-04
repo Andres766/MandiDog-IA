@@ -13,7 +13,7 @@ Proyecto de grado de Ingeniería de Software, Universidad Cooperativa de Colombi
 | Parte | Carpeta | Estado |
 |---|---|---|
 | API | `api/` | ✅ Lista en local: 103 pruebas |
-| Integración AI for Pet | `app/android/` + `app/lib/features/capture/` | ✅ Puente nativo, pantalla de prueba conectada a la API y simulación en navegador; falta probar el SDK en un celular real |
+| Integración AI for Pet | `app/android/` + `app/lib/features/capture/` | ✅ Probada con un escaneo real en un Galaxy S25 Ultra (Android 17); simulación en navegador |
 | App (mascotas, historial, autorización, Firebase) | `app/` | Pendiente (etapa 3) |
 | Despliegue | Railway | Pendiente |
 
@@ -158,9 +158,17 @@ abre la cámara de dientes de AI for Pet y muestra el JSON que devuelve.
 
 ```bash
 cd app
-flutter devices                      # el celular debe aparecer
+adb devices                          # el celular debe aparecer como "device"
+adb reverse tcp:8008 tcp:8008        # el celular ve la API del PC en localhost:8008 por el cable
 flutter run --dart-define-from-file=dart_defines.local.json
 ```
+
+En `dart_defines.local.json` deja `"API_BASE_URL": "http://localhost:8008"` para el celular
+por USB (`http://10.0.2.2:8008` es para el emulador). Solo la versión de depuración permite
+HTTP hacia esas direcciones (`android/app/src/debug/res/xml/network_security_config_debug.xml`).
+
+En Samsung, además de la *Depuración USB*, hay que desactivar el **Bloqueo automático**
+(Ajustes → Seguridad y privacidad), que bloquea la depuración por cable.
 
 `dart_defines.local.json` se crea copiando `dart_defines.example.json` y poniendo ahí la
 clave completa. Está en el `.gitignore`.
