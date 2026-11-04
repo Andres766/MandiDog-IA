@@ -179,7 +179,7 @@ Detalle en [datos-y-consentimiento.md](datos-y-consentimiento.md). Resumen:
 | PUT | `/api/v1/me/consent` | Aceptar la versión vigente del texto de autorización |
 | DELETE | `/api/v1/me/consent` | Revocar la autorización (bloquea análisis nuevos) |
 | DELETE | `/api/v1/me` | Eliminar la cuenta con mascotas e historial |
-| POST / GET | `/api/v1/pets` | Crear / listar mis mascotas |
+| POST / GET | `/api/v1/pets` | Crear / listar mis mascotas (cada una con `last_analysis`: nivel y fecha del último escaneo) |
 | GET / PATCH / DELETE | `/api/v1/pets/{id}` | Ver / editar / borrar (con su historial) |
 | GET | `/api/v1/pets/{id}/analyses` | Historial, del más reciente al más antiguo (`limit`, `offset`) |
 | POST | `/api/v1/analysis` | Registrar el resultado de un escaneo (201, o 200 si es un reintento) |

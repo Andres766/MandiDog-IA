@@ -12,9 +12,9 @@ Proyecto de grado de Ingeniería de Software, Universidad Cooperativa de Colombi
 
 | Parte | Carpeta | Estado |
 |---|---|---|
-| API | `api/` | ✅ Lista en local: 103 pruebas |
+| API | `api/` | ✅ Lista en local: 104 pruebas |
 | Integración AI for Pet | `app/android/` + `app/lib/features/capture/` | ✅ Probada con un escaneo real en un Galaxy S25 Ultra (Android 17); simulación en navegador |
-| App (mascotas, historial, autorización, Firebase) | `app/` | Pendiente (etapa 3) |
+| App (acceso, perros, autorización, escaneo, resultado, historial, cuenta) | `app/` | ✅ Etapa 3 en modo desarrollo: 31 pruebas; Firebase listo para conectar |
 | Despliegue | Railway | Pendiente |
 
 El 2026-11-04 se reemplazó el modelo propio por el SDK de AI for Pet. Los motivos y las
@@ -61,7 +61,7 @@ La API aplica las migraciones al arrancar. Los puertos se cambian en `.env`
 ### Correr las pruebas
 
 ```bash
-docker compose run --rm api pytest                  # 103 pruebas
+docker compose run --rm api pytest                  # 104 pruebas
 docker compose run --rm api pytest --cov=app        # con cobertura
 docker compose run --rm api sh -c "ruff check . && ruff format --check ."
 ```
@@ -150,11 +150,28 @@ keytool -J-Duser.language=en -list -v -keystore ~/.android/debug.keystore \
         -alias androiddebugkey -storepass android -keypass android | grep SHA
 ```
 
-### Probar la integración en un celular
+### Configuración de la app (`dart_defines.local.json`)
+
+La app se configura al compilar. Copia `app/dart_defines.example.json` a
+`app/dart_defines.local.json` (está en el `.gitignore`) y completa:
+
+| Clave | Para qué |
+|---|---|
+| `AUTH_MODE` | `dev` (usuario de prueba, sin Firebase) o `firebase` |
+| `DEV_USER` | Usuario de prueba sugerido en modo dev |
+| `API_BASE_URL` | `http://localhost:8008` (celular por USB) · `http://10.0.2.2:8008` (emulador) |
+| `AIFORPET_SDK_KEY` | Clave publicable completa del SDK de AI for Pet |
+| `FIREBASE_API_KEY`, `FIREBASE_APP_ID`, `FIREBASE_PROJECT_ID`, `FIREBASE_MESSAGING_SENDER_ID` | Del proyecto de Firebase (*Configuración del proyecto → Tus apps → Android*) |
+
+Para usar Firebase: crea el proyecto, habilita **Authentication → Correo electrónico/contraseña**,
+registra la app Android (`co.edu.ucc.mandidog` + SHA-1), completa esas cuatro claves y pon
+`"AUTH_MODE": "firebase"`. La API también debe pasar a `AUTH_MODE=firebase` con
+`FIREBASE_PROJECT_ID`. No hace falta `google-services.json`: las opciones se pasan al compilar.
+
+### Probar en un celular
 
 Hace falta un **celular Android 9 o superior** conectado por USB con la depuración USB
-activada; el emulador no sirve para la cámara del SDK. La pantalla actual es **temporal**:
-abre la cámara de dientes de AI for Pet y muestra el JSON que devuelve.
+activada; el emulador no sirve para la cámara del SDK.
 
 ```bash
 cd app
@@ -163,29 +180,25 @@ adb reverse tcp:8008 tcp:8008        # el celular ve la API del PC en localhost:
 flutter run --dart-define-from-file=dart_defines.local.json
 ```
 
-En `dart_defines.local.json` deja `"API_BASE_URL": "http://localhost:8008"` para el celular
-por USB (`http://10.0.2.2:8008` es para el emulador). Solo la versión de depuración permite
-HTTP hacia esas direcciones (`android/app/src/debug/res/xml/network_security_config_debug.xml`).
-
+Solo la versión de depuración permite HTTP hacia la API local
+(`android/app/src/debug/res/xml/network_security_config_debug.xml`); producción usa HTTPS.
 En Samsung, además de la *Depuración USB*, hay que desactivar el **Bloqueo automático**
 (Ajustes → Seguridad y privacidad), que bloquea la depuración por cable.
 
-`dart_defines.local.json` se crea copiando `dart_defines.example.json` y poniendo ahí la
-clave completa. Está en el `.gitignore`.
-
-Cada escaneo consume uno de los análisis del plan de prueba (100, vence el 2026-11-18).
-La clave nunca se escribe en el código ni se sube a git.
+Cada escaneo real consume uno de los análisis del plan de prueba de AI for Pet (100, vence
+el 2026-11-18).
 
 ### Probar en el navegador (sin SDK)
 
-El SDK de AI for Pet solo existe en Android, así que en el navegador la pantalla de prueba
-**simula** el escaneo con el resultado de ejemplo oficial de AI for Pet. Todo lo demás es
-real: autorización, mascota y registro en la API local (queda marcado como
-`2.2.3-simulacion`). Con la API corriendo (`docker compose up -d`):
+El SDK de AI for Pet solo existe en Android, así que en el navegador el escaneo se
+**simula** con el resultado de ejemplo oficial de AI for Pet. Todo lo demás es real: acceso,
+autorización, perros, historial y registro en la API local (queda marcado como
+`2.2.3-simulacion` y la app lo muestra como "Resultado simulado"). Con la API corriendo
+(`docker compose up -d`):
 
 ```bash
 cd app
-flutter build web --dart-define=API_BASE_URL=http://localhost:8008 --dart-define=DEV_USER=prueba-chrome
+flutter build web --dart-define=API_BASE_URL=http://localhost:8008
 python -m http.server 5050 --bind 127.0.0.1 -d build/web
 # abrir http://localhost:5050 en Chrome
 ```
@@ -198,7 +211,7 @@ usa CORS; en producción esa variable queda vacía.
 ```bash
 cd app
 flutter analyze
-flutter test                         # simulan el canal nativo; no consumen análisis
+flutter test                         # 31 pruebas; simulan la API y el SDK, no consumen análisis
 flutter build apk --debug            # compila con el SDK real de AI for Pet
 ```
 
@@ -208,3 +221,5 @@ flutter build apk --debug            # compila con el SDK real de AI for Pet
   interpretación del resultado, endpoints, códigos de error y decisiones.
 - [Datos y consentimiento](docs/datos-y-consentimiento.md): Ley 1581, transferencia
   internacional a AI for Pet, derechos del titular y texto de autorización.
+- [Diseño](docs/diseno.md): sistema visual (color, tipografía, semáforo), pantallas y la
+  lista de verificación de accesibilidad aplicada.
