@@ -38,6 +38,7 @@ dist/
 *.egg-info/
 app/.dart_tool/
 app/build/
+app/android/.kotlin/
 *.apk
 *.aab
 

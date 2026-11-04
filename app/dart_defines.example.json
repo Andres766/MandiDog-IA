@@ -1,4 +1,10 @@
 {
+  "AUTH_MODE": "dev",
+  "DEV_USER": "prueba-local",
+  "API_BASE_URL": "http://localhost:8008",
   "AIFORPET_SDK_KEY": "tt_pk_test_PEGA_AQUI_TU_CLAVE_COMPLETA",
-  "API_BASE_URL": "http://10.0.2.2:8008"
+  "FIREBASE_API_KEY": "",
+  "FIREBASE_APP_ID": "",
+  "FIREBASE_PROJECT_ID": "",
+  "FIREBASE_MESSAGING_SENDER_ID": ""
 }
