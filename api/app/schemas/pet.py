@@ -11,7 +11,7 @@ from pydantic import (
     field_validator,
 )
 
-from app.models import PetSex
+from app.models import Pet, PetSex, RiskLevel
 
 
 def _not_in_future(value: date) -> date:
@@ -51,6 +51,11 @@ class PetUpdateIn(BaseModel):
         return value
 
 
+class LastAnalysisOut(BaseModel):
+    risk_level: RiskLevel
+    created_at: datetime
+
+
 class PetOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
@@ -62,3 +67,10 @@ class PetOut(BaseModel):
     weight_kg: float | None
     created_at: datetime
     updated_at: datetime
+    last_analysis: LastAnalysisOut | None = Field(
+        default=None, description="Resultado más reciente, para la lista de mascotas"
+    )
+
+    @classmethod
+    def from_model(cls, pet: Pet, last: LastAnalysisOut | None = None) -> "PetOut":
+        return cls.model_validate(pet).model_copy(update={"last_analysis": last})

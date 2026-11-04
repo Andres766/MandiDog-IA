@@ -112,3 +112,17 @@ def test_historial_de_mascota_ajena_responde_404(client):
 def test_historial_vacio(client):
     pet = create_pet(client)
     assert client.get(f"/api/v1/pets/{pet['id']}/analyses", headers=auth()).json() == []
+
+
+def test_lista_de_mascotas_trae_el_ultimo_resultado(client):
+    _, toby = ready_owner(client)
+    max_ = create_pet(client, name="Max")
+    submit_scan(client, toby["id"], tooth_result("NORMAL"))
+    submit_scan(client, toby["id"], tooth_result("WARNING"))
+
+    pets = {p["name"]: p for p in client.get("/api/v1/pets", headers=auth()).json()}
+
+    assert pets["Toby"]["last_analysis"]["risk_level"] == "red"
+    assert pets["Max"]["last_analysis"] is None
+    single = client.get(f"/api/v1/pets/{max_['id']}", headers=auth()).json()
+    assert single["last_analysis"] is None

@@ -1,11 +1,13 @@
 import uuid
+from datetime import datetime
 from typing import Any
 
 from sqlalchemy import select
+from sqlalchemy.dialects.postgresql import distinct_on
 from sqlalchemy.orm import Session
 
 from app.core.errors import NotFoundError
-from app.models import Analysis, Pet, User
+from app.models import Analysis, Pet, RiskLevel, User
 
 
 def get_owned_pet(db: Session, user: User, pet_id: uuid.UUID) -> Pet:
@@ -17,6 +19,21 @@ def get_owned_pet(db: Session, user: User, pet_id: uuid.UUID) -> Pet:
 
 def list_pets(db: Session, user: User) -> list[Pet]:
     return list(db.scalars(select(Pet).where(Pet.owner_id == user.id).order_by(Pet.created_at)))
+
+
+def last_analyses(
+    db: Session, pet_ids: list[uuid.UUID]
+) -> dict[uuid.UUID, tuple[RiskLevel, datetime]]:
+    """Nivel y fecha del análisis más reciente de cada mascota (una sola consulta)."""
+    if not pet_ids:
+        return {}
+    rows = db.execute(
+        select(Analysis.pet_id, Analysis.risk_level, Analysis.created_at)
+        .where(Analysis.pet_id.in_(pet_ids))
+        .ext(distinct_on(Analysis.pet_id))
+        .order_by(Analysis.pet_id, Analysis.created_at.desc())
+    ).all()
+    return {pet_id: (level, created_at) for pet_id, level, created_at in rows}
 
 
 def create_pet(db: Session, user: User, data: dict[str, Any]) -> Pet:
