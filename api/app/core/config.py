@@ -29,6 +29,14 @@ class Settings(BaseSettings):
     # Versión vigente del texto de autorización (docs/datos-y-consentimiento.md).
     consent_policy_version: str = Field(min_length=1, max_length=50)
 
+    # Orígenes web autorizados, separados por coma. Solo para probar la app en el navegador;
+    # la app Android no necesita CORS. Vacío = sin CORS.
+    cors_allow_origins: str = ""
+
+    @property
+    def cors_origins(self) -> list[str]:
+        return [o.strip().rstrip("/") for o in self.cors_allow_origins.split(",") if o.strip()]
+
     @field_validator("database_url")
     @classmethod
     def _driver_psycopg(cls, value: str) -> str:
@@ -45,6 +53,9 @@ class Settings(BaseSettings):
             raise ValueError("AUTH_MODE=dev no está permitido con ENV=production")
         if self.auth_mode == "firebase" and not self.firebase_project_id:
             raise ValueError("AUTH_MODE=firebase requiere FIREBASE_PROJECT_ID")
+        for origin in self.cors_origins:
+            if not origin.startswith(("http://", "https://")) or "*" in origin:
+                raise ValueError(f"CORS_ALLOW_ORIGINS: origen inválido {origin!r} (sin comodines)")
         return self
 
 

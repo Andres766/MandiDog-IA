@@ -51,3 +51,31 @@ def test_firebase_requiere_project_id(settings_factory):
 )
 def test_url_de_railway_se_normaliza(raw, expected):
     assert normalize_database_url(raw) == expected
+
+
+def test_sin_cors_por_defecto(client):
+    response = client.get("/health", headers={"Origin": "http://localhost:5050"})
+    assert "access-control-allow-origin" not in response.headers
+
+
+def test_cors_para_probar_en_el_navegador(make_client):
+    client = make_client(cors_allow_origins="http://localhost:5050, http://127.0.0.1:5050/")
+    preflight = client.options(
+        "/api/v1/me",
+        headers={
+            "Origin": "http://localhost:5050",
+            "Access-Control-Request-Method": "PUT",
+            "Access-Control-Request-Headers": "x-dev-user,content-type",
+        },
+    )
+    assert preflight.status_code == 200
+    assert preflight.headers["access-control-allow-origin"] == "http://localhost:5050"
+
+    other = client.get("/health", headers={"Origin": "http://evil.example"})
+    assert "access-control-allow-origin" not in other.headers
+
+
+@pytest.mark.parametrize("origin", ["*", "localhost:5050", "http://*.example.com"])
+def test_cors_rechaza_comodines_y_origenes_invalidos(settings_factory, origin):
+    with pytest.raises(ValidationError, match="CORS_ALLOW_ORIGINS"):
+        settings_factory(cors_allow_origins=origin)

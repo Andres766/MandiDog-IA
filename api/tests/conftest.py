@@ -44,6 +44,7 @@ def settings_factory() -> SettingsFactory:
         "firebase_project_id": None,
         "database_url": _require_env("TEST_DATABASE_URL"),
         "consent_policy_version": TEST_POLICY_VERSION,
+        "cors_allow_origins": "",
     }
 
     def make(**overrides: object) -> Settings:
