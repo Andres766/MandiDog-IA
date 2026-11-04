@@ -1,7 +1,8 @@
+import 'package:flutter/foundation.dart';
+
 /// Configuración que se inyecta al compilar:
 ///
-///   flutter run --dart-define=AIFORPET_SDK_KEY=tt_pk_test_... \
-///               --dart-define=API_BASE_URL=http://192.168.1.50:8008
+///   flutter run --dart-define-from-file=dart_defines.local.json
 ///
 /// La clave del SDK nunca se escribe en el código ni se sube a git.
 class AppConfig {
@@ -18,4 +19,15 @@ class AppConfig {
     'API_BASE_URL',
     defaultValue: 'http://10.0.2.2:8008',
   );
+
+  /// Usuario de prueba para la API en `AUTH_MODE=dev` (header X-Dev-User).
+  /// Desaparece cuando se integre Firebase Auth en la etapa 3.
+  static const devUser = String.fromEnvironment(
+    'DEV_USER',
+    defaultValue: 'prueba-local',
+  );
+
+  /// El SDK de AI for Pet solo existe en Android (y en iOS, aún no integrado).
+  static bool get aiforpetSdkAvailable =>
+      !kIsWeb && defaultTargetPlatform == TargetPlatform.android;
 }
