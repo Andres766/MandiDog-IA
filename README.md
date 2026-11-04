@@ -13,7 +13,7 @@ Proyecto de grado de Ingeniería de Software, Universidad Cooperativa de Colombi
 |---|---|---|
 | 1. API | `api/` | ✅ Lista en local: 119 pruebas, 96 % de cobertura |
 | 2. Modelo | `ml/` | Pendiente |
-| 3. App | `app/` | Pendiente |
+| 3. App | `app/` | Esqueleto creado (`co.edu.ucc.mandidog`); funcionalidades pendientes |
 | Despliegue | Railway + R2 | Pendiente |
 
 ## Estructura
@@ -155,6 +155,30 @@ Todas están documentadas en [`.env.example`](.env.example). Las más importante
    ```
 3. Antes de abrir la app al público, verificar contra R2 que un PUT con otro tamaño se
    rechaza con 403 (la prueba automática lo verifica contra MinIO).
+
+---
+
+## App · identificador
+
+| Dato | Valor |
+|---|---|
+| `applicationId` / package name (Android) | `co.edu.ucc.mandidog` (en `app/android/app/build.gradle.kts`) |
+| Nombre visible | MandiDog IA |
+| Paquete Dart | `mandidog` |
+
+El `applicationId` **no se puede cambiar** después de publicar en Google Play o de
+registrar la app en Firebase.
+
+Para registrar la app en Firebase también se pide la huella SHA-1 del certificado de firma.
+La de depuración se obtiene así (el `-J-Duser.language=en` evita un fallo de `keytool` de
+Java 25 en español):
+
+```bash
+keytool -J-Duser.language=en -list -v -keystore ~/.android/debug.keystore \
+        -alias androiddebugkey -storepass android -keypass android | grep SHA
+```
+
+La de la llave de publicación (release) se agrega en Firebase cuando se cree esa llave.
 
 ## Documentación
 
