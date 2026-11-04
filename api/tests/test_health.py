@@ -1,15 +1,14 @@
 from app import __version__
 
 
-def test_health_reporta_estado_y_version_del_modelo(client):
+def test_health_reporta_estado_y_proveedor(client):
     response = client.get("/health")
     assert response.status_code == 200
     assert response.json() == {
         "status": "ok",
         "version": __version__,
         "environment": "test",
-        "model_version": "stub-1",
-        "inference_backend": "stub",
+        "analysis_provider": "aiforpet",
         "database": "ok",
     }
 

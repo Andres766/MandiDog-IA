@@ -3,8 +3,7 @@ from datetime import date, timedelta
 import pytest
 from sqlalchemy import text
 
-from tests.conftest import list_keys
-from tests.helpers import analyze, auth, create_pet, sharp_jpeg, upload
+from tests.helpers import auth, create_pet, ready_owner, submit_scan, tooth_result
 
 
 def test_crear_mascota(client):
@@ -71,35 +70,31 @@ def test_actualizar_mascota_parcialmente(client):
     assert null_name.status_code == 422
 
 
-def test_borrar_mascota_borra_historial_y_fotos(client, engine, s3, bucket):
-    pet = create_pet(client)
-    analyze(client, pet["id"], upload(client, sharp_jpeg(seed=1)), consent=True)
-    analyze(client, pet["id"], upload(client, sharp_jpeg(seed=2)), consent=True)
-    assert len(list_keys(s3, bucket, "permanent/")) == 2
+def test_borrar_mascota_borra_su_historial(client, engine):
+    _, pet = ready_owner(client)
+    submit_scan(client, pet["id"])
+    submit_scan(client, pet["id"])
 
     response = client.delete(f"/api/v1/pets/{pet['id']}", headers=auth())
 
     assert response.status_code == 204
-    assert list_keys(s3, bucket) == []
     with engine.connect() as conn:
         assert conn.execute(text("SELECT count(*) FROM analyses")).scalar_one() == 0
     assert client.get(f"/api/v1/pets/{pet['id']}", headers=auth()).status_code == 404
 
 
-def test_historial_ordenado_del_mas_reciente_al_mas_antiguo(make_client):
-    ids = []
-    for probability in (0.1, 0.45, 0.8):
-        client = make_client(probability=probability)
-        if not ids:
-            pet = create_pet(client)
-        response = analyze(client, pet["id"], upload(client, sharp_jpeg()), consent=False)
-        ids.append(response.json()["analysis_id"])
+def test_historial_ordenado_del_mas_reciente_al_mas_antiguo(client):
+    _, pet = ready_owner(client)
+    ids = [
+        submit_scan(client, pet["id"], tooth_result(status)).json()["analysis_id"]
+        for status in ("NORMAL", "CAUTION", "WARNING")
+    ]
 
     history = client.get(f"/api/v1/pets/{pet['id']}/analyses", headers=auth()).json()
 
     assert [h["analysis_id"] for h in history] == list(reversed(ids))
     assert [h["risk_level"] for h in history] == ["red", "yellow", "green"]
-    assert all(h["has_image"] is False and h["image_consent"] is False for h in history)
+    assert all(h["findings"] for h in history)
     assert all("veterinario" in h["recommendation"] for h in history)
 
     page = client.get(

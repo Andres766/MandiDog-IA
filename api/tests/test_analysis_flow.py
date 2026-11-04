@@ -1,25 +1,12 @@
-import time
+import uuid
 
 import pytest
 from sqlalchemy import text
 
-from tests.conftest import list_keys
-from tests.helpers import (
-    analyze,
-    blurry_jpeg,
-    bright_jpeg,
-    create_pet,
-    dark_jpeg,
-    put_signed,
-    sharp_jpeg,
-    sharp_png,
-    sign,
-    small_jpeg,
-    upload,
-)
+from tests.helpers import auth, create_pet, ready_owner, submit_scan, tooth_result
 
 
-def _analysis_row(engine, analysis_id):
+def _row(engine, analysis_id):
     with engine.connect() as conn:
         return (
             conn.execute(text("SELECT * FROM analyses WHERE id = :id"), {"id": analysis_id})
@@ -28,178 +15,153 @@ def _analysis_row(engine, analysis_id):
         )
 
 
-def _consumed_at(engine, key):
-    with engine.connect() as conn:
-        return conn.execute(
-            text("SELECT consumed_at FROM uploads WHERE object_key = :k"), {"k": key}
-        ).scalar_one()
+def test_registra_el_resultado_oficial_de_ejemplo(client, engine):
+    user, pet = ready_owner(client)
+    result = tooth_result("CAUTION", userId=user["id"], petId=pet["id"])
 
-
-def test_flujo_completo_sin_consentimiento(client, engine, s3, bucket):
-    pet = create_pet(client)
-    key = upload(client, sharp_jpeg())
-
-    started = time.perf_counter()
-    response = analyze(client, pet["id"], key, consent=False)
-    elapsed = time.perf_counter() - started
+    response = submit_scan(client, pet["id"], result)
 
     assert response.status_code == 201, response.text
     body = response.json()
-    assert set(body) == {
-        "analysis_id",
-        "risk_level",
-        "confidence",
-        "model_version",
-        "recommendation",
-        "created_at",
-    }
-    assert body["risk_level"] == "green"
-    assert body["confidence"] == pytest.approx(0.85)
-    assert body["model_version"] == "stub-1"
-    assert "veterinario" in body["recommendation"]
-    assert elapsed < 10
+    assert body["risk_level"] == "yellow"
+    assert body["provider_status"] == "CAUTION"
+    assert body["sub_part"] == "TCENTER"
+    assert body["model_version"] == "aiforpet-scansdk-android/2.2.3"
+    assert body["findings"] == [
+        {"code": "inflammation", "name": "Inflamación de encías", "status": "abnormal"},
+        {"code": "calculus", "name": "Sarro (cálculo dental)", "status": "normal"},
+    ]
+    assert "consulta siempre a tu veterinario" in body["recommendation"]
 
-    # image_consent=false: el temporal se borra y no se conserva nada.
-    assert list_keys(s3, bucket) == []
-    row = _analysis_row(engine, body["analysis_id"])
-    assert row["image_consent"] is False
-    assert row["image_key"] is None
-    assert row["consent_at"] is None
-    assert row["consent_policy_version"] is None
-    assert float(row["probability_signs"]) == pytest.approx(0.15)
-    assert row["image_width"] == 640 and row["image_height"] == 480
-    assert row["blur_variance"] > 60
-    assert row["inference_ms"] >= 0
-    assert _consumed_at(engine, key) is not None
-
-
-def test_flujo_completo_con_consentimiento_copia_a_permanent(client, engine, s3, bucket):
-    pet = create_pet(client)
-    key = upload(client, sharp_jpeg())
-
-    response = analyze(client, pet["id"], key, consent=True)
-
-    assert response.status_code == 201, response.text
-    analysis_id = response.json()["analysis_id"]
-    assert list_keys(s3, bucket) == [f"permanent/{analysis_id}.jpg"]
-    row = _analysis_row(engine, analysis_id)
-    assert row["image_consent"] is True
-    assert row["image_key"] == f"permanent/{analysis_id}.jpg"
-    assert row["consent_at"] is not None
+    row = _row(engine, body["analysis_id"])
+    assert row["provider_result"] == result  # JSON original intacto, para auditoría
     assert row["consent_policy_version"] == "test-v1"
-
-
-def test_png_con_consentimiento_conserva_extension(client, s3, bucket):
-    pet = create_pet(client)
-    key = upload(client, sharp_png(), content_type="image/png")
-    response = analyze(client, pet["id"], key, consent=True)
-    assert response.status_code == 201, response.text
-    assert list_keys(s3, bucket) == [f"permanent/{response.json()['analysis_id']}.png"]
+    assert row["provider_analyzed_at"].year == 2026
+    assert row["part"] == "TOOTH"
 
 
 @pytest.mark.parametrize(
-    ("probability", "level"),
-    [(0.15, "green"), (0.45, "yellow"), (0.75, "red")],
+    ("status", "level"), [("NORMAL", "green"), ("CAUTION", "yellow"), ("WARNING", "red")]
 )
-def test_nivel_de_riesgo_segun_probabilidad(make_client, probability, level):
-    client = make_client(probability=probability)
-    pet = create_pet(client)
-    response = analyze(client, pet["id"], upload(client, sharp_jpeg()))
+def test_semaforo_segun_estado_de_aiforpet(client, status, level):
+    _, pet = ready_owner(client)
+    response = submit_scan(client, pet["id"], tooth_result(status))
     assert response.status_code == 201
     assert response.json()["risk_level"] == level
     assert "consulta siempre a tu veterinario" in response.json()["recommendation"]
 
 
-@pytest.mark.parametrize(
-    ("image", "expected_code"),
-    [
-        (blurry_jpeg, "blurry"),
-        (dark_jpeg, "too_dark"),
-        (bright_jpeg, "too_bright"),
-        (small_jpeg, "too_small"),
-    ],
-)
-def test_calidad_insuficiente_rechaza_y_borra_el_temporal(
-    client, engine, s3, bucket, image, expected_code
-):
-    pet = create_pet(client)
-    key = upload(client, image())
+def test_reintento_con_el_mismo_escaneo_no_duplica(client, engine):
+    _, pet = ready_owner(client)
+    scan_id = str(uuid.uuid4())
 
-    response = analyze(client, pet["id"], key, consent=True)
+    first = submit_scan(client, pet["id"], client_scan_id=scan_id)
+    retry = submit_scan(client, pet["id"], client_scan_id=scan_id)
 
-    assert response.status_code == 422
-    error = response.json()["error"]
-    assert error["code"] == "image_quality"
-    codes = [issue["code"] for issue in error["details"]]
-    assert expected_code in codes
-    assert all(issue["message"] for issue in error["details"])
-    assert list_keys(s3, bucket) == []
+    assert first.status_code == 201
+    assert retry.status_code == 200
+    assert retry.json() == first.json()
     with engine.connect() as conn:
-        assert conn.execute(text("SELECT count(*) FROM analyses")).scalar_one() == 0
-    assert _consumed_at(engine, key) is not None
+        assert conn.execute(text("SELECT count(*) FROM analyses")).scalar_one() == 1
 
 
-def test_archivo_que_no_corresponde_al_tipo_declarado(client, s3, bucket):
-    """Firma y PUT como JPEG, pero el contenido real es PNG."""
-    pet = create_pet(client)
-    data = sharp_png()
-    signed = sign(client, data, content_type="image/jpeg")
-    assert put_signed(signed, data).status_code == 200
+def test_escaneo_de_otro_usuario_no_se_puede_reutilizar(client):
+    _, pet_ana = ready_owner(client, "ana")
+    _, pet_beto = ready_owner(client, "beto")
+    scan_id = str(uuid.uuid4())
+    assert submit_scan(client, pet_ana["id"], client_scan_id=scan_id).status_code == 201
 
-    response = analyze(client, pet["id"], signed["object_key"])
-
-    assert response.status_code == 422
-    assert response.json()["error"]["details"][0]["code"] == "format_mismatch"
-    assert list_keys(s3, bucket) == []
-
-
-def test_objeto_que_no_coincide_con_lo_firmado_se_rechaza(client, engine, s3, bucket):
-    """head_object detecta un objeto con otro tamaño antes de descargarlo."""
-    pet = create_pet(client)
-    data = sharp_jpeg()
-    signed = sign(client, data)
-    s3.put_object(
-        Bucket=bucket, Key=signed["object_key"], Body=data + b"extra", ContentType="image/jpeg"
-    )
-
-    response = analyze(client, pet["id"], signed["object_key"])
-
-    assert response.status_code == 422
-    assert response.json()["error"]["code"] == "upload_mismatch"
-    assert list_keys(s3, bucket) == []
-    assert _consumed_at(engine, signed["object_key"]) is not None
-
-
-def test_si_la_foto_no_se_subio_la_carga_queda_disponible(client, engine):
-    pet = create_pet(client)
-    data = sharp_jpeg()
-    signed = sign(client, data)
-
-    response = analyze(client, pet["id"], signed["object_key"])
-    assert response.status_code == 404
-    assert response.json()["error"]["code"] == "upload_missing"
-    assert _consumed_at(engine, signed["object_key"]) is None
-
-    # La app reintenta el PUT y vuelve a notificar.
-    assert put_signed(signed, data).status_code == 200
-    assert analyze(client, pet["id"], signed["object_key"]).status_code == 201
-
-
-def test_politica_de_consentimiento_desactualizada(client, engine, s3, bucket):
-    pet = create_pet(client)
-    key = upload(client, sharp_jpeg())
-
-    response = analyze(client, pet["id"], key, consent=True, policy_version="2020-01-v0")
+    response = submit_scan(client, pet_beto["id"], user="beto", client_scan_id=scan_id)
 
     assert response.status_code == 409
-    assert response.json()["error"]["code"] == "consent_policy_outdated"
-    assert _consumed_at(engine, key) is None
-    assert list_keys(s3, bucket) == [key]
+    assert response.json()["error"]["code"] == "scan_id_conflict"
 
 
-def test_consentimiento_sin_version_de_politica_es_invalido(client):
-    pet = create_pet(client)
-    key = upload(client, sharp_jpeg())
-    response = analyze(client, pet["id"], key, consent=True, policy_version=None)
+def test_mismo_escaneo_con_otra_mascota_es_conflicto(client):
+    _, pet = ready_owner(client)
+    other = create_pet(client, name="Max")
+    scan_id = str(uuid.uuid4())
+    assert submit_scan(client, pet["id"], client_scan_id=scan_id).status_code == 201
+
+    response = submit_scan(client, other["id"], client_scan_id=scan_id)
+    assert response.status_code == 409
+
+
+def test_mascota_ajena_responde_404(client):
+    ready_owner(client, "ana")
+    pet_beto = create_pet(client, user="beto")
+    response = submit_scan(client, pet_beto["id"], user="ana")
+    assert response.status_code == 404
+    assert response.json()["error"]["code"] == "pet_not_found"
+
+
+@pytest.mark.parametrize("field", ["userId", "petId"])
+@pytest.mark.parametrize("value", [lambda: str(uuid.uuid4()), lambda: "no-es-un-uuid"])
+def test_resultado_de_otro_usuario_o_mascota_se_rechaza(client, field, value):
+    _, pet = ready_owner(client)
+    response = submit_scan(client, pet["id"], tooth_result(**{field: value()}))
     assert response.status_code == 422
-    assert response.json()["error"]["code"] == "validation_error"
+    assert response.json()["error"]["code"] == "scan_result_mismatch"
+
+
+@pytest.mark.parametrize(
+    "result",
+    [
+        tooth_result(status="FAIL"),
+        tooth_result(part="EYE"),
+        tooth_result(petType="CAT"),
+        tooth_result(subPart="EYEL"),
+        tooth_result("DESCONOCIDO"),
+        {"status": "SUCCESS", "petType": "DOG", "part": "TOOTH"},
+        {},
+    ],
+    ids=[
+        "no_success",
+        "parte_ojo",
+        "gato",
+        "posicion_de_ojo",
+        "estado_desconocido",
+        "sin_response",
+        "vacio",
+    ],
+)
+def test_resultado_que_no_es_un_escaneo_dental_valido(client, result):
+    _, pet = ready_owner(client)
+    response = submit_scan(client, pet["id"], result)
+    assert response.status_code == 422
+    assert response.json()["error"]["code"] == "scan_result_invalid"
+    assert response.json()["error"]["details"]
+
+
+def test_resultado_demasiado_grande(client):
+    _, pet = ready_owner(client)
+    result = tooth_result(relleno="x" * 70_000)
+    response = submit_scan(client, pet["id"], result)
+    assert response.status_code == 422
+    assert response.json()["error"]["code"] == "scan_result_invalid"
+
+
+def test_campos_nuevos_de_aiforpet_se_aceptan_y_se_guardan(client, engine):
+    _, pet = ready_owner(client)
+    result = tooth_result(campoNuevo={"version": 3})
+    response = submit_scan(client, pet["id"], result)
+    assert response.status_code == 201
+    assert _row(engine, response.json()["analysis_id"])["provider_result"]["campoNuevo"] == {
+        "version": 3
+    }
+
+
+def test_version_del_sdk_con_formato_invalido(client):
+    _, pet = ready_owner(client)
+    response = client.post(
+        "/api/v1/analysis",
+        json={
+            "pet_id": pet["id"],
+            "client_scan_id": str(uuid.uuid4()),
+            "sdk_platform": "android",
+            "sdk_version": "latest; DROP TABLE",
+            "result": tooth_result(),
+        },
+        headers=auth(),
+    )
+    assert response.status_code == 422

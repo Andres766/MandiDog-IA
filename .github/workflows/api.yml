@@ -41,8 +41,8 @@ jobs:
       - name: Preparar .env de pruebas
         run: cp .env.example .env
       - name: Construir imágenes
-        run: docker compose build api storage-init
-      - name: Pruebas contra PostgreSQL y MinIO reales
+        run: docker compose build api
+      - name: Pruebas contra PostgreSQL real
         run: docker compose run --rm api pytest --cov=app --cov-report=term-missing
       - name: Logs si algo falla
         if: failure()
