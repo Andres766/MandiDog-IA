@@ -1,0 +1,84 @@
+# Entorno local: API + PostgreSQL + MinIO (simula Cloudflare R2).
+#   cp .env.example .env
+#   docker compose up -d --build
+#   docker compose run --rm api pytest
+name: mandidog-ia
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:?define POSTGRES_USER en .env}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?define POSTGRES_PASSWORD en .env}
+      POSTGRES_DB: ${POSTGRES_DB:?define POSTGRES_DB en .env}
+    ports:
+      - "127.0.0.1:${POSTGRES_HOST_PORT:-5436}:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./api/docker/postgres-init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+
+  # MinIO ya no publica imágenes oficiales (Docker Hub / quay.io); se usa la de
+  # Chainguard, fijada por digest para que el entorno sea reproducible.
+  minio:
+    image: cgr.dev/chainguard/minio:latest@sha256:3c60a2a8c4d33409a9bc7a623a7fcbfb4605adc3d89422d2f53b3f673a6e5597
+    command: ["server", "/data", "--console-address", ":9001"]
+    environment:
+      MINIO_ROOT_USER: ${S3_ACCESS_KEY_ID:?define S3_ACCESS_KEY_ID en .env}
+      MINIO_ROOT_PASSWORD: ${S3_SECRET_ACCESS_KEY:?define S3_SECRET_ACCESS_KEY en .env}
+      MC_HOST_local: http://${S3_ACCESS_KEY_ID}:${S3_SECRET_ACCESS_KEY}@localhost:9000
+      MC_CONFIG_DIR: /tmp/.mc
+    ports:
+      # Abierto en la red local para poder subir fotos desde un celular de prueba.
+      - "${MINIO_API_HOST_PORT:-9000}:9000"
+      - "127.0.0.1:${MINIO_CONSOLE_HOST_PORT:-9001}:9001"
+    volumes:
+      - miniodata:/data
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 3s
+      timeout: 5s
+      retries: 20
+
+  # Crea el bucket y la regla de ciclo de vida de tmp/ (el mismo script sirve para R2).
+  storage-init:
+    build:
+      context: ./api
+      target: dev
+    env_file: .env
+    environment:
+      S3_ENDPOINT_URL: http://minio:9000
+    command: ["python", "-m", "scripts.init_storage"]
+    depends_on:
+      minio:
+        condition: service_healthy
+    restart: "no"
+
+  api:
+    build:
+      context: ./api
+      target: dev
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+      TEST_DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}_test
+      S3_ENDPOINT_URL: http://minio:9000
+      UVICORN_EXTRA_ARGS: --reload
+      WATCHFILES_FORCE_POLLING: "true"
+    ports:
+      - "${API_HOST_PORT:-8008}:8000"
+    volumes:
+      - ./api:/srv
+    depends_on:
+      postgres:
+        condition: service_healthy
+      storage-init:
+        condition: service_completed_successfully
+
+volumes:
+  pgdata:
+  miniodata:
