@@ -39,6 +39,10 @@ app/build/
 *.apk
 *.aab
 
+# --- Registros de fallos de la JVM (Gradle) ---
+hs_err_pid*.log
+*.hprof
+
 # --- Editor / SO ---
 .idea/
 .vscode/

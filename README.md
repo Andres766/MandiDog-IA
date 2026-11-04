@@ -1,7 +1,8 @@
 # MandiDog IA
 
-Plataforma móvil que analiza una foto de la boca de un perro y devuelve un nivel de riesgo
-orientativo (**verde / amarillo / rojo**) sobre posibles patologías mandibulares.
+App móvil que analiza fotos de los dientes de un perro con el SDK de **AI for Pet** y
+devuelve un nivel de riesgo orientativo (**verde / amarillo / rojo**) sobre su salud dental:
+sarro e inflamación de encías.
 Proyecto de grado de Ingeniería de Software, Universidad Cooperativa de Colombia, sede Pasto.
 
 > **MandiDog IA no diagnostica.** Es una herramienta de tamizaje orientativo. Todo
@@ -9,29 +10,31 @@ Proyecto de grado de Ingeniería de Software, Universidad Cooperativa de Colombi
 
 ## Estado
 
-| Etapa | Carpeta | Estado |
+| Parte | Carpeta | Estado |
 |---|---|---|
-| 1. API | `api/` | ✅ Lista en local: 119 pruebas, 96 % de cobertura |
-| 2. Modelo | `ml/` | Pendiente |
-| 3. App | `app/` | Esqueleto creado (`co.edu.ucc.mandidog`); funcionalidades pendientes |
-| Despliegue | Railway + R2 | Pendiente |
+| API | `api/` | ✅ Lista en local: 98 pruebas, 98 % de cobertura |
+| Integración AI for Pet | `app/android/` + `app/lib/features/capture/` | ✅ Puente nativo y pantalla de prueba; falta probar en un celular real |
+| App (mascotas, historial, autorización, Firebase) | `app/` | Pendiente (etapa 3) |
+| Despliegue | Railway | Pendiente |
+
+El 2026-11-04 se reemplazó el modelo propio por el SDK de AI for Pet. Los motivos y las
+consecuencias están en [docs/arquitectura.md](docs/arquitectura.md#0-cambio-de-arquitectura-2026-11-04).
 
 ## Estructura
 
 ```
 ├── api/            FastAPI + SQLAlchemy + Alembic (Python 3.11)
-├── ml/             Entrenamiento: transfer learning MobileNetV2 / ResNet50   (etapa 2)
-├── app/            Flutter, Android primero                                 (etapa 3)
+├── app/            Flutter, Android 9+, con el SDK nativo de AI for Pet
 ├── docs/
-│   ├── arquitectura.md               flujo, endpoints, errores, umbrales, decisiones
-│   └── datos-y-consentimiento.md     Ley 1581: ciclo de vida de las fotos y autorización
-├── docker-compose.yml               api + postgres + minio (simula R2)
+│   ├── arquitectura.md               flujo, integración con el SDK, endpoints, errores, decisiones
+│   └── datos-y-consentimiento.md     Ley 1581, transferencia a AI for Pet, texto de autorización
+├── docker-compose.yml               api + postgres
 └── .env.example
 ```
 
 ---
 
-## Etapa 1 · API
+## API
 
 ### Requisitos
 
@@ -43,39 +46,29 @@ Proyecto de grado de Ingeniería de Software, Universidad Cooperativa de Colombi
 ```bash
 cp .env.example .env
 docker compose up -d --build
+curl http://localhost:8008/health
+# {"status":"ok","version":"0.1.0","environment":"development","analysis_provider":"aiforpet","database":"ok"}
 ```
-
-Esto levanta:
 
 | Servicio | URL en tu máquina | Notas |
 |---|---|---|
 | API | http://localhost:8008 | `/docs` tiene la documentación interactiva (OpenAPI) |
 | PostgreSQL | `localhost:5436` | bases `mandidog` y `mandidog_test` |
-| MinIO (API S3) | http://localhost:9000 | simula Cloudflare R2 |
-| Consola de MinIO | http://localhost:9001 | usuario y clave: `S3_ACCESS_KEY_ID` / `S3_SECRET_ACCESS_KEY` |
 
-Al arrancar, `storage-init` crea el bucket y la regla que borra `tmp/` al día siguiente, y
-la API aplica las migraciones. Para comprobarlo:
-
-```bash
-curl http://localhost:8008/health
-# {"status":"ok","version":"0.1.0","environment":"development","model_version":"stub-1",...}
-```
-
-> Los puertos se cambian en `.env` (`API_HOST_PORT`, `POSTGRES_HOST_PORT`, …). Los
-> predeterminados evitan el 5432 y el 8000, que suelen estar ocupados.
+La API aplica las migraciones al arrancar. Los puertos se cambian en `.env`
+(`API_HOST_PORT`, `POSTGRES_HOST_PORT`); los predeterminados evitan el 5432 y el 8000.
 
 ### Correr las pruebas
 
 ```bash
-docker compose run --rm api pytest                       # 119 pruebas
-docker compose run --rm api pytest --cov=app             # con cobertura
-docker compose run --rm api ruff check . && docker compose run --rm api ruff format --check .
+docker compose run --rm api pytest                  # 98 pruebas
+docker compose run --rm api pytest --cov=app        # con cobertura
+docker compose run --rm api sh -c "ruff check . && ruff format --check ."
 ```
 
-Las pruebas usan PostgreSQL y MinIO reales (base `mandidog_test` y bucket
-`mandidog-images-test`), no simulaciones: los CHECK son de Postgres y la firma de las URLs
-solo se puede probar contra un servidor S3.
+Usan el PostgreSQL de docker-compose (base `mandidog_test`), no una simulación: los CHECK,
+los enums y JSONB son de Postgres. Los resultados de prueba parten del JSON oficial de
+ejemplo de AI for Pet.
 
 ### Probar el flujo a mano (modo dev)
 
@@ -86,39 +79,38 @@ avisa en los logs que está en este modo y **no arranca así con `ENV=production
 API=http://localhost:8008
 H='X-Dev-User: ana'
 
-# 1. Crear una mascota
+# 1. Aceptar la autorización vigente (sin ella no se registran análisis)
+curl -s -X PUT $API/api/v1/me/consent -H "$H" -H 'Content-Type: application/json' \
+     -d '{"policy_version":"2026-11-v2"}'
+
+# 2. Crear una mascota
 PET=$(curl -s -X POST $API/api/v1/pets -H "$H" -H 'Content-Type: application/json' \
-      -d '{"name":"Toby","breed":"Pug"}' | python -c 'import sys,json;print(json.load(sys.stdin)["id"])')
+      -d '{"name":"Toby"}' | python -c 'import sys,json;print(json.load(sys.stdin)["id"])')
 
-# 2. Pedir la URL firmada (tipo y tamaño exactos de la foto)
-FOTO=foto.jpg
-SIGN=$(curl -s -X POST $API/api/v1/uploads/sign -H "$H" -H 'Content-Type: application/json' \
-       -d "{\"content_type\":\"image/jpeg\",\"content_length\":$(wc -c < $FOTO)}")
-URL=$(echo "$SIGN" | python -c 'import sys,json;print(json.load(sys.stdin)["upload_url"])')
-KEY=$(echo "$SIGN" | python -c 'import sys,json;print(json.load(sys.stdin)["object_key"])')
-
-# 3. Subir la foto directo al almacenamiento
-curl -s -X PUT "$URL" -H 'Content-Type: image/jpeg' --data-binary @$FOTO -o /dev/null -w '%{http_code}\n'
-
-# 4. Pedir el análisis
-curl -s -X POST $API/api/v1/analysis -H "$H" -H 'Content-Type: application/json' \
-     -d "{\"pet_id\":\"$PET\",\"object_key\":\"$KEY\",\"image_consent\":false}"
+# 3. Registrar un resultado como el que devuelve el SDK
+curl -s -X POST $API/api/v1/analysis -H "$H" -H 'Content-Type: application/json' -d "{
+  \"pet_id\": \"$PET\",
+  \"client_scan_id\": \"$(python -c 'import uuid;print(uuid.uuid4())')\",
+  \"sdk_platform\": \"android\", \"sdk_version\": \"2.2.3\",
+  \"result\": {\"status\":\"SUCCESS\",\"petType\":\"DOG\",\"part\":\"TOOTH\",\"subPart\":\"TCENTER\",
+             \"response\":{\"status\":\"CAUTION\",\"symptoms\":[
+               {\"code\":\"inflammation\",\"abnormLevel\":1},{\"code\":\"calculus\",\"abnormLevel\":0}]}}
+}"
+# → risk_level "yellow", hallazgos en español y la recomendación con el aviso del veterinario
 ```
 
-Con `INFERENCE_BACKEND=stub` el resultado es fijo. Para ver los otros niveles cambia
-`INFERENCE_STUB_PROBABILITY` en `.env` (`0.45` amarillo, `0.75` rojo) y reinicia la API con
-`docker compose up -d api`.
+### Variables de entorno
 
-### Probar desde un celular en la misma red
+Todas están en [`.env.example`](.env.example):
 
-La URL firmada lleva el host dentro de la firma, así que debe ser alcanzable desde el
-celular. En `.env` pon la IP de tu PC en la red local:
+| Variable | Local | Producción |
+|---|---|---|
+| `ENV` | `development` | `production` |
+| `AUTH_MODE` | `dev` | `firebase` (+ `FIREBASE_PROJECT_ID`) |
+| `DATABASE_URL` | Postgres de docker-compose | la que entrega Railway |
+| `CONSENT_POLICY_VERSION` | `2026-11-v2` | versión vigente del texto de autorización |
 
-```
-S3_PUBLIC_ENDPOINT_URL=http://192.168.1.50:9000
-```
-
-y reinicia: `docker compose up -d api`. La app debe apuntar a `http://192.168.1.50:8008`.
+La clave del SDK de AI for Pet **no** va en la API: la usa la app.
 
 ### Editar código de la API sin Docker
 
@@ -130,35 +122,11 @@ uv run ruff check .
 
 La carpeta `api/` está montada en el contenedor y Uvicorn recarga solo al guardar.
 
-### Variables de entorno
-
-Todas están documentadas en [`.env.example`](.env.example). Las más importantes:
-
-| Variable | Valor local | Producción |
-|---|---|---|
-| `ENV` | `development` | `production` |
-| `AUTH_MODE` | `dev` | `firebase` (+ `FIREBASE_PROJECT_ID`) |
-| `INFERENCE_BACKEND` | `stub` | `keras` (+ `INFERENCE_MODEL_PATH`) |
-| `RISK_THRESHOLD_YELLOW` / `RISK_THRESHOLD_RED` | `0.30` / `0.60` | **provisionales**, salen de la validación cruzada de `ml/` |
-| `S3_ENDPOINT_URL` | MinIO | `https://<ACCOUNT_ID>.r2.cloudflarestorage.com` |
-| `CONSENT_POLICY_VERSION` | `2026-11-v1` | versión vigente del texto de autorización |
-
-### Preparar Cloudflare R2 (cuando se despliegue)
-
-1. Crear el bucket y un token de API de R2 con permiso de lectura/escritura sobre él.
-2. Aplicar la regla de `tmp/` con el mismo script que usa docker-compose:
-   ```bash
-   cd api
-   S3_ENDPOINT_URL=https://<ACCOUNT_ID>.r2.cloudflarestorage.com S3_REGION=auto \
-   S3_ACCESS_KEY_ID=... S3_SECRET_ACCESS_KEY=... S3_BUCKET=mandidog-images \
-   uv run python -m scripts.init_storage
-   ```
-3. Antes de abrir la app al público, verificar contra R2 que un PUT con otro tamaño se
-   rechaza con 403 (la prueba automática lo verifica contra MinIO).
-
 ---
 
-## App · identificador
+## App
+
+### Identificador
 
 | Dato | Valor |
 |---|---|
@@ -166,23 +134,49 @@ Todas están documentadas en [`.env.example`](.env.example). Las más importante
 | Nombre visible | MandiDog IA |
 | Paquete Dart | `mandidog` |
 
-El `applicationId` **no se puede cambiar** después de publicar en Google Play o de
-registrar la app en Firebase.
+El `applicationId` **no se puede cambiar** después de registrarlo en Firebase, en AI for Pet
+o en Google Play.
 
-Para registrar la app en Firebase también se pide la huella SHA-1 del certificado de firma.
-La de depuración se obtiene así (el `-J-Duser.language=en` evita un fallo de `keytool` de
-Java 25 en español):
+### Registrar la app en AI for Pet
+
+En la consola de AI for Pet (*SDK integration → Android → Edit registration*) se registran el
+paquete y el **SHA-256** del certificado que firma la app. Debug, release y Google Play App
+Signing tienen huellas distintas; hay que registrar cada una que se vaya a usar. La de
+depuración se obtiene así (el `-J-Duser.language=en` evita un fallo de `keytool` de Java 25
+en español):
 
 ```bash
 keytool -J-Duser.language=en -list -v -keystore ~/.android/debug.keystore \
         -alias androiddebugkey -storepass android -keypass android | grep SHA
 ```
 
-La de la llave de publicación (release) se agrega en Firebase cuando se cree esa llave.
+### Probar la integración en un celular
+
+Hace falta un **celular Android 9 o superior** conectado por USB con la depuración USB
+activada; el emulador no sirve para la cámara del SDK. La pantalla actual es **temporal**:
+abre la cámara de dientes de AI for Pet y muestra el JSON que devuelve.
+
+```bash
+cd app
+flutter devices                      # el celular debe aparecer
+flutter run --dart-define=AIFORPET_SDK_KEY=tt_pk_test_...
+```
+
+Cada escaneo consume uno de los análisis del plan de prueba (100, vence el 2026-11-18).
+La clave nunca se escribe en el código ni se sube a git.
+
+### Pruebas de la app
+
+```bash
+cd app
+flutter analyze
+flutter test                         # simulan el canal nativo; no consumen análisis
+flutter build apk --debug            # compila con el SDK real de AI for Pet
+```
 
 ## Documentación
 
-- [Arquitectura](docs/arquitectura.md): flujo de carga firmada, verificación de pertenencia,
-  niveles de riesgo, endpoints, códigos de error y decisiones.
-- [Datos y consentimiento](docs/datos-y-consentimiento.md): Ley 1581, ciclo de vida de las
-  fotos y texto de autorización.
+- [Arquitectura](docs/arquitectura.md): flujo del escaneo, integración con el SDK,
+  interpretación del resultado, endpoints, códigos de error y decisiones.
+- [Datos y consentimiento](docs/datos-y-consentimiento.md): Ley 1581, transferencia
+  internacional a AI for Pet, derechos del titular y texto de autorización.

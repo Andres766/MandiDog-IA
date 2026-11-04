@@ -1,250 +1,231 @@
 # Arquitectura de MandiDog IA
 
-> **MandiDog IA no diagnostica.** Es una herramienta de tamizaje orientativo. Toda
-> respuesta al usuario incluye la recomendación de consultar al veterinario.
+> **MandiDog IA no diagnostica.** Es una herramienta de tamizaje orientativo de salud
+> dental en perros. Toda respuesta al usuario incluye la recomendación de consultar al
+> veterinario, siempre visible y no ocultable.
+
+## 0. Cambio de arquitectura (2026-11-04)
+
+El plan inicial entrenaba un modelo propio (MobileNetV2/ResNet50) y subía las fotos a
+Cloudflare R2. El equipo decidió **reemplazarlo por el SDK de AI for Pet** (TTcare): el
+análisis de la foto lo hacen sus servidores. En consecuencia:
+
+| Antes | Ahora |
+|---|---|
+| Modelo propio en `ml/` | SDK de AI for Pet; `ml/` sale del alcance |
+| Foto → R2 con URL firmada → API → modelo | Foto → SDK → servidores de AI for Pet; la API solo recibe el resultado |
+| Control de calidad propio (nitidez, luz) | Lo hace la cámara del SDK en el celular |
+| Probabilidad + umbrales provisionales | Estado del proveedor (`NORMAL`/`CAUTION`/`WARNING`) |
+| Autorización opcional para conservar la foto | Autorización **obligatoria** antes de usar la cámara (la foto sale del país) |
+
+**Alcance:** el SDK detecta en dientes **sarro (`calculus`) e inflamación de encías
+(`inflammation`)**. No detecta fracturas, tumores ni maloclusión, así que el alcance real es
+salud dental y gingival, no "patologías mandibulares" en general. El título y los objetivos
+del proyecto deben ajustarse con el director.
 
 ## 1. Componentes
 
 ```mermaid
 flowchart LR
-    App["App Flutter<br/>(Android)"]
+    subgraph Celular
+        App["App Flutter"]
+        SDK["SDK AI for Pet<br/>(nativo Android)"]
+    end
     FB["Firebase Auth"]
+    AFP["Servidores de AI for Pet<br/>(análisis + imágenes de resultado)"]
     API["API FastAPI<br/>(Railway, Docker)"]
     DB[("PostgreSQL<br/>(Railway)")]
-    R2[("Cloudflare R2<br/>tmp/ · permanent/")]
 
     App -- "inicio de sesión" --> FB
+    App -- "MethodChannel scanTeeth" --> SDK
+    SDK -- "foto + ids internos" --> AFP
+    SDK -- "JSON de resultado" --> App
     App -- "JSON + Bearer token" --> API
-    App -- "PUT firmado (la foto)" --> R2
-    API -- "verifica JWT con llaves públicas de Google" --> FB
-    API -- "SQLAlchemy" --> DB
-    API -- "head / get / copy / delete" --> R2
+    API -- "verifica el JWT" --> FB
+    API --> DB
 ```
 
-| Pieza | Tecnología | Notas |
+| Pieza | Tecnología | Carpeta |
 |---|---|---|
-| App | Flutter (Dart), Android primero | Etapa 3 |
+| App | Flutter (Dart), Android 9+ | `app/` |
+| Análisis | SDK de AI for Pet `io.github.aiforpet-ttcare:scansdk-lib:2.2.3` | `app/android/` |
 | API | FastAPI + Uvicorn, Python 3.11, Docker | `api/` |
-| Modelo | TensorFlow/Keras, transfer learning MobileNetV2 / ResNet50 | `ml/` (etapa 2) |
-| Base de datos | PostgreSQL gestionado en Railway | migraciones con Alembic |
-| Imágenes | Cloudflare R2 vía boto3 (API S3) | MinIO en local |
-| Autenticación | Firebase Auth | modo `dev` solo local |
+| Base de datos | PostgreSQL gestionado en Railway, migraciones con Alembic | `api/alembic/` |
+| Autenticación | Firebase Auth (modo `dev` solo local) | — |
 
-## 2. Flujo de análisis: carga por URL firmada
-
-La foto **no pasa por la API**. La app la sube directo a R2 con una URL firmada; la API
-solo la descarga cuando hay que procesarla. Así el contenedor no carga con el tráfico de
-imágenes y la respuesta es más rápida (objetivo: menos de 10 s de punta a punta).
+## 2. Flujo de un escaneo
 
 ```mermaid
 sequenceDiagram
     participant App
+    participant SDK as SDK AI for Pet
+    participant AFP as Servidores AI for Pet
     participant API
-    participant R2
     participant DB as PostgreSQL
 
-    App->>API: POST /api/v1/uploads/sign {content_type, content_length}
-    API->>DB: INSERT uploads (object_key, user_id, tipo, tamaño)
-    API-->>App: {upload_url, object_key=tmp/<uuid>.jpg, expires_at, headers}
-    App->>R2: PUT upload_url (Content-Type y Content-Length firmados)
-    App->>API: POST /api/v1/analysis {pet_id, object_key, image_consent, consent_policy_version}
-    API->>DB: UPDATE uploads SET consumed_at … WHERE dueño y sin usar
-    API->>R2: HEAD tmp/<uuid>.jpg (existe, tamaño y tipo correctos)
-    API->>R2: GET tmp/<uuid>.jpg
-    Note over API: calidad → 224×224 + normalización → modelo → nivel de riesgo
-    opt image_consent = true
-        API->>R2: COPY tmp/<uuid>.jpg → permanent/<analysis_id>.jpg
+    App->>API: GET /api/v1/me
+    API-->>App: consent.required
+    opt autorización pendiente
+        App->>App: muestra el texto y el checkbox
+        App->>API: PUT /api/v1/me/consent {policy_version}
     end
+    App->>App: genera client_scan_id (UUID)
+    App->>SDK: scanTeeth(sdkKey, userId, petId)
+    SDK->>SDK: cámara de dientes + control de calidad local
+    SDK->>AFP: foto (con token de corta duración)
+    AFP-->>SDK: resultado
+    SDK-->>App: JSON
+    App->>API: POST /api/v1/analysis {pet_id, client_scan_id, sdk_platform, sdk_version, result}
+    API->>API: valida contrato, dueño, autorización e ids
     API->>DB: INSERT analyses
-    API->>R2: DELETE tmp/<uuid>.jpg
-    API-->>App: {analysis_id, risk_level, confidence, model_version, recommendation, created_at}
+    API-->>App: semáforo, hallazgos en español, recomendación
 ```
 
-### 2.1 Límite de tipo y tamaño en la firma
+Si el envío a la API falla (sin señal), la app **reintenta con el mismo `client_scan_id`**:
+la API devuelve el análisis ya guardado (200) en lugar de duplicarlo, y no se consume otro
+análisis del plan de AI for Pet.
 
-La URL firmada es un **PUT** con vigencia de 5 minutos. Un PUT firmado no admite un rango
-de tamaño (`content-length-range` solo existe en el POST firmado con *policy*), y
-**Cloudflare R2 no soporta POST firmado**. Por eso la app declara el tipo y el tamaño
-**exactos** al pedir la firma, y ambos quedan como cabeceras firmadas
-(`X-Amz-SignedHeaders=content-length;content-type;host`). Si la app sube otro tipo u otro
-tamaño, R2 rechaza la firma con 403. La API valida antes de firmar que el tipo sea
-`image/jpeg` o `image/png` y que el tamaño no supere 10 MB.
+## 3. Integración con el SDK
 
-### 2.2 Verificación de pertenencia de la `object_key`
-
-La clave la genera el servidor (`tmp/<uuid4>.<ext>`) y queda registrada en la tabla
-`uploads` a nombre del usuario. Al procesar:
-
-1. **Formato.** Se exige `^tmp/<uuid>\.(jpg|png)$`. Claves como `permanent/…` o `../`
-   se rechazan con 422.
-2. **Reclamo atómico**, en la misma transacción que crea el análisis:
-   ```sql
-   UPDATE uploads SET consumed_at = now()
-   WHERE object_key = :key AND user_id = :usuario AND consumed_at IS NULL
-   RETURNING *;
-   ```
-   - Sin filas → **404 `upload_not_found`**, el mismo error si la clave no existe o es de
-     otro usuario, para no revelar claves ajenas.
-   - Clave propia ya usada → **409 `upload_already_used`**. Cada carga se procesa una vez.
-   - Error inesperado (R2 caído, fallo del modelo) → rollback; la carga se puede reintentar.
-   - Rechazo por calidad o por objeto que no coincide → se confirma el consumo y se borra
-     el temporal.
-3. **Mascota.** El `pet_id` debe pertenecer al usuario (404 `pet_not_found`).
-4. **`head_object` antes de descargar.** El objeto debe existir y su tamaño y tipo deben
-   coincidir con lo registrado al firmar.
-5. **Formato real.** Tras descargar, Pillow revisa los bytes del archivo; no se confía en
-   la cabecera `Content-Type`.
-
-## 3. Consentimiento (Ley 1581 de 2012)
-
-Resumen; el detalle está en [datos-y-consentimiento.md](datos-y-consentimiento.md).
-
-- La URL firmada apunta **siempre** a `tmp/`. La API borra el temporal apenas termina de
-  procesarlo, haya o no consentimiento y también si lo rechaza por calidad.
-- Con `image_consent=true` la API copia el objeto a `permanent/<analysis_id>.<ext>` y
-  guarda esa ruta en `image_key`, junto con `consent_at` y `consent_policy_version`.
-- Una regla de ciclo de vida borra `tmp/` al día siguiente: es la red de seguridad para
-  las fotos subidas que nunca se procesan.
-- La base de datos impide guardar una imagen sin consentimiento aunque la API tenga un bug:
-  `CHECK (image_key IS NULL OR (image_consent AND consent_at IS NOT NULL))`, más los CHECK
-  de política completa, prefijo `permanent/` y revocación sin imagen.
-
-## 4. Nivel de riesgo
-
-El modelo es un clasificador **binario** (`sin_signos` / `con_signos`) que devuelve
-`p = P(con_signos)`. La API lo traduce a tres niveles:
-
-| Condición | Nivel |
+| Aspecto | Valor |
 |---|---|
-| `p < RISK_THRESHOLD_YELLOW` | verde |
-| `RISK_THRESHOLD_YELLOW ≤ p < RISK_THRESHOLD_RED` | amarillo |
-| `p ≥ RISK_THRESHOLD_RED` | rojo |
+| Dependencia | `io.github.aiforpet-ttcare:scansdk-lib:2.2.3` (Maven Central). Es la versión que documenta la consola; existe una 3.1.0 sin guía publicada |
+| Android mínimo | 9.0 (`minSdk 28`) |
+| Pantalla nativa | `com.aiforpet.pet.check.ToothCameraActivity` |
+| Canal Flutter | `co.edu.ucc.mandidog/aiforpet`, método `scanTeeth` (`MainActivity.kt`) |
+| Datos enviados | `petType=DOG`, `userId` y `petId` (UUID de nuestra API), `sdkKey`. Nunca nombre, correo ni raza |
+| Opciones | sin cuestionario (no está en español), sin pantalla de resultado del SDK, sin PDF, una sola foto |
+| Clave | publicable (`tt_pk_test_…` / `tt_pk_live_…`), se pasa al compilar con `--dart-define=AIFORPET_SDK_KEY=…` y no se sube a git |
+| Identidad de la app | paquete `co.edu.ucc.mandidog` + SHA-256 del certificado de firma, registrados en la consola de AI for Pet. Debug, release y Google Play App Signing tienen huellas distintas: hay que registrar cada una |
+| ProGuard/R8 | el `.aar` trae sus propias reglas; no hay que agregar nada |
 
-- `probability_signs = p`
-- `confidence = max(p, 1 − p)`: la probabilidad que el modelo asigna a la clase que predice.
+El SDK cambia la clave publicable por un token de corta duración en el *Token Broker* de AI
+for Pet y con ese token envía la foto. La interfaz del SDK está en coreano, inglés,
+japonés, italiano, sueco o tailandés; **no tiene español**.
 
-> [!IMPORTANT]
-> **`RISK_THRESHOLD_YELLOW=0.30` y `RISK_THRESHOLD_RED=0.60` son PROVISIONALES.**
-> Son bajos a propósito: en tamizaje se prefiere un falso positivo (una consulta de más)
-> a un falso negativo (un caso que no se revisa). El valor definitivo sale del **barrido
-> del umbral de decisión en la validación cruzada estratificada de 5 particiones de `ml/`**:
-> `RISK_THRESHOLD_YELLOW` será el umbral que alcance la **sensibilidad objetivo**, medida
-> sobre las predicciones fuera de partición con particiones agrupadas por perro. El
-> criterio exacto de `RISK_THRESHOLD_RED` se fija con el mismo barrido en la etapa 2.
-> Los umbrales se cambian solo por variable de entorno, sin tocar código.
+## 4. Interpretación del resultado
 
-Todas las recomendaciones terminan con el aviso: *"Este resultado es orientativo y no es
-un diagnóstico: consulta siempre a tu veterinario."*
+`api/app/services/aiforpet.py` aplica el contrato documentado por AI for Pet:
 
-## 5. Control de calidad de la foto
+| Del SDK | En MandiDog |
+|---|---|
+| raíz `status = SUCCESS` | solo significa que el análisis terminó; no que todo esté normal |
+| `response.status = NORMAL` | **verde** |
+| `response.status = CAUTION` | **amarillo** (se recomienda observar) |
+| `response.status = WARNING` | **rojo** (se recomienda consulta) |
+| `symptoms[].code` | identidad del hallazgo; nunca se usa la posición en la lista |
+| `abnormalLevel` (si viene) o `abnormLevel` | 0 → normal · positivo → anormal · negativo → no evaluado |
+| `calculus` / `inflammation` | "Sarro (cálculo dental)" / "Inflamación de encías" |
+| código desconocido | se muestra el nombre del SDK o el código |
 
-Antes de inferir (`api/app/services/image_quality.py`):
+- **No hay porcentaje de confianza.** AI for Pet no expone puntajes ni probabilidades del
+  modelo; la app muestra el semáforo y la lista de hallazgos.
+- El JSON original se guarda completo en `analyses.provider_result` (auditoría y validación
+  clínica). Campos nuevos que agregue AI for Pet se aceptan sin romper la API.
+- La recomendación está en español y **siempre** termina con: *"Este resultado es
+  orientativo y no es un diagnóstico: consulta siempre a tu veterinario."*
 
-| Control | Regla | Variable |
-|---|---|---|
-| Formato | JPEG (incluye MPO de algunos celulares) o PNG, coincidente con lo firmado | — |
-| Píxeles | máximo 40 MP (evita bombas de descompresión) | — |
-| Tamaño | lado menor ≥ 224 px | `QUALITY_MIN_SIDE_PX` |
-| Desenfoque | varianza del laplaciano, con el lado mayor reducido a 512 px | `QUALITY_MIN_BLUR_VARIANCE` |
-| Luz | luminancia media entre los límites | `QUALITY_MIN_LUMINANCE`, `QUALITY_MAX_LUMINANCE` |
+### Qué verifica la API al recibir un resultado
 
-Si falla, la API responde **422 `image_quality`** con la lista de problemas y un mensaje que
-dice qué corregir. La orientación EXIF del celular se aplica antes de medir y de inferir.
-Los límites de desenfoque y luz también son provisionales: se ajustarán con fotos reales.
+1. La autorización de datos vigente del usuario (409 `consent_required`).
+2. Que la mascota sea del usuario (404 `pet_not_found`).
+3. Que el JSON sea un escaneo dental de perro terminado (`SUCCESS`, `DOG`, `TOOTH`, estado
+   conocido, máximo 64 KB) (422 `scan_result_invalid`).
+4. Que `userId` y `petId` del resultado sean los del usuario y la mascota (422
+   `scan_result_mismatch`).
+5. Que el `client_scan_id` no se haya usado con otros datos (409 `scan_id_conflict`).
 
-## 6. Inferencia intercambiable
+**Limitación conocida:** la API no puede comprobar criptográficamente que el JSON lo generó
+AI for Pet; lo reporta la app. La consola de AI for Pet ofrece un *Webhook URL* para recibir
+resultados directamente de sus servidores; es la mejora natural cuando se publique su
+formato. La base de datos además exige que el semáforo corresponda al estado del proveedor
+(`ck_analyses_risk_matches_status`).
 
-`api/app/inference/` define el contrato `InferenceBackend` (`version`, `preprocessing`,
-`predict`). La implementación se elige con `INFERENCE_BACKEND`:
+## 5. Autorización de datos (Ley 1581)
 
-- `stub`: devuelve una probabilidad fija (`INFERENCE_STUB_PROBABILITY`). Permite trabajar en
-  `api/` y `app/` mientras `ml/` entrena. **La API no arranca con `stub` y `ENV=production`**:
-  daría resultados falsos a usuarios reales.
-- `keras`: carga el `.keras` de `INFERENCE_MODEL_PATH` y el `.json` de metadatos que genera
-  `ml/` (versión, tamaño de entrada y normalización: `mobilenet_v2` o `resnet50`).
+Detalle en [datos-y-consentimiento.md](datos-y-consentimiento.md). Resumen:
 
-El preprocesamiento redimensiona directo a 224×224 sin recortar, igual que el entrenamiento.
+- Sin autorización vigente la app **no abre la cámara**: en cuanto se toma la foto, el SDK
+  la envía a AI for Pet (transferencia internacional).
+- La autorización se registra por usuario (`users.consent_policy_version`, `consent_at`) y
+  cada análisis guarda la versión que estaba vigente.
+- Si el texto cambia, sube `CONSENT_POLICY_VERSION` y todos deben aceptarlo de nuevo.
 
-## 7. Autenticación
+## 6. Autenticación
 
 | `AUTH_MODE` | Cómo identifica al usuario |
 |---|---|
-| `firebase` | `Authorization: Bearer <ID token>`. Se verifica con PyJWT contra las llaves públicas de Google (firma RS256, `aud`, `iss`, `exp`, `auth_time`). Solo requiere `FIREBASE_PROJECT_ID`, sin cuenta de servicio. |
-| `dev` | Header `X-Dev-User: <id>`, sin verificación. El uid se guarda como `dev:<id>`. |
+| `firebase` | `Authorization: Bearer <ID token>`. Se verifica con PyJWT contra las llaves públicas de Google (RS256, `aud`, `iss`, `exp`, `auth_time`). Solo requiere `FIREBASE_PROJECT_ID`. |
+| `dev` | Header `X-Dev-User: <id>`, sin verificación; el uid se guarda como `dev:<id>`. Advertencia visible en los logs y **la API no arranca así con `ENV=production`**. |
 
-Con `AUTH_MODE=dev` la API escribe una advertencia visible en los logs al arrancar, y
-**se niega a arrancar si `ENV=production`**. El usuario se crea en la primera petición
-autenticada (`GET /api/v1/me`).
-
-## 8. Endpoints
+## 7. Endpoints
 
 | Método | Ruta | Descripción |
 |---|---|---|
-| GET | `/health` | Estado del servicio, versión y modelo cargado (503 si la BD no responde) |
-| GET | `/api/v1/me` | Usuario autenticado (lo crea en la primera llamada) |
-| POST | `/api/v1/pets` | Crear mascota |
-| GET | `/api/v1/pets` | Listar mis mascotas |
-| GET / PATCH / DELETE | `/api/v1/pets/{id}` | Ver / editar / borrar (borra también historial y fotos) |
+| GET | `/health` | Estado, versión y proveedor de análisis (503 si la BD no responde) |
+| GET | `/api/v1/me` | Usuario (se crea en la primera llamada) y estado de su autorización |
+| PUT | `/api/v1/me/consent` | Aceptar la versión vigente del texto de autorización |
+| DELETE | `/api/v1/me/consent` | Revocar la autorización (bloquea análisis nuevos) |
+| DELETE | `/api/v1/me` | Eliminar la cuenta con mascotas e historial |
+| POST / GET | `/api/v1/pets` | Crear / listar mis mascotas |
+| GET / PATCH / DELETE | `/api/v1/pets/{id}` | Ver / editar / borrar (con su historial) |
 | GET | `/api/v1/pets/{id}/analyses` | Historial, del más reciente al más antiguo (`limit`, `offset`) |
-| POST | `/api/v1/uploads/sign` | URL firmada para subir la foto |
-| POST | `/api/v1/analysis` | Procesar la foto subida |
-| DELETE | `/api/v1/analyses/{id}/image` | Revocar la autorización: borra la foto |
+| POST | `/api/v1/analysis` | Registrar el resultado de un escaneo (201, o 200 si es un reintento) |
 
-La especificación completa queda en `/docs` (OpenAPI).
+Especificación completa en `/docs` (OpenAPI).
 
-### Formato de errores
+### Errores
 
 ```json
-{"error": {"code": "image_quality", "message": "La foto no tiene la calidad suficiente…",
-           "details": [{"code": "blurry", "message": "La foto está desenfocada. …"}]}}
+{"error": {"code": "scan_result_invalid", "message": "El resultado del escaneo no tiene…",
+           "details": [{"field": "part", "problem": "Input should be 'TOOTH'"}]}}
 ```
-
-`message` está en español y se puede mostrar tal cual. Códigos que la app debe manejar:
 
 | HTTP | `code` | Qué hacer en la app |
 |---|---|---|
 | 401 | `missing_credentials`, `invalid_token` | Volver a iniciar sesión |
-| 404 | `upload_missing` | Reintentar el PUT (si la URL venció, pedir otra firma) |
-| 404 | `upload_not_found`, `pet_not_found` | Volver a empezar la captura |
-| 409 | `upload_already_used` | Tomar una foto nueva |
-| 409 | `consent_policy_outdated` | Actualizar la app / mostrar el texto vigente |
-| 422 | `image_quality` | Mostrar `details[].message` y volver a la cámara |
-| 422 | `upload_mismatch`, `file_too_large`, `validation_error` | Tomar la foto de nuevo |
-| 503 | `storage_unavailable`, `auth_unavailable` | Servicio caído: reintentar más tarde |
+| 404 | `pet_not_found` | Refrescar la lista de mascotas |
+| 409 | `consent_required`, `consent_policy_outdated` | Mostrar el texto de autorización vigente |
+| 409 | `scan_id_conflict` | Repetir el escaneo con un `client_scan_id` nuevo |
+| 409 | `account_has_validations` | Contactar al equipo |
+| 422 | `scan_result_invalid`, `scan_result_mismatch` | Repetir el escaneo; reportar si se repite |
+| 503 | `auth_unavailable` | Servicio caído: reintentar más tarde |
+| red | sin respuesta | Reintentar `POST /analysis` con el **mismo** `client_scan_id` |
 
-## 9. Modelo de datos
+## 8. Modelo de datos
 
-Esquema canónico: `api/alembic/versions/0001_esquema_inicial.py`. IDs UUID y fechas
-`timestamptz`.
+Migraciones: `0001_esquema_inicial` (diseño original) y `0002_integracion_aiforpet` (cambio
+de arquitectura). IDs UUID y fechas `timestamptz`.
 
 | Tabla | Propósito |
 |---|---|
-| `users` | Cuenta (`firebase_uid` único, `role`: owner / vet / admin) |
+| `users` | Cuenta (`firebase_uid` único, `role` owner/vet/admin) y autorización de datos |
 | `pets` | Mascotas del propietario (CASCADE al borrar el usuario) |
-| `uploads` | Cada URL firmada entregada: base de la verificación de pertenencia |
-| `analyses` | Resultado, métricas de calidad, versión del modelo y consentimiento |
+| `analyses` | `client_scan_id` único, semáforo, estado del proveedor, posición (`TLEFT`/`TCENTER`/`TRIGHT`), hallazgos (JSONB), JSON original (JSONB), versión del SDK, recomendación y versión de la autorización |
 | `validations` | Validación clínica ciega por veterinarios (`sin_signos`, `con_signos`, `no_evaluable`); los endpoints llegan después |
 
 Índice `ix_analyses_pet_created (pet_id, created_at DESC)` para el historial.
 
-## 10. Despliegue (pendiente de configurar)
+## 9. Despliegue (pendiente de configurar)
 
-- **API en Railway** con el `Dockerfile` de `api/` (última etapa: `prod`, usuario sin root).
+- **API en Railway** con el `Dockerfile` de `api/` (última etapa `prod`, usuario sin root).
   `docker/start.sh` aplica las migraciones y arranca Uvicorn en `$PORT`. La `DATABASE_URL`
-  de Railway (`postgresql://…`) se normaliza sola al driver `psycopg`.
-- **R2:** `S3_ENDPOINT_URL=https://<ACCOUNT_ID>.r2.cloudflarestorage.com`, `S3_REGION=auto`,
-  y `S3_PUBLIC_ENDPOINT_URL` igual al endpoint. El bucket y la regla de `tmp/` se crean con
-  `python -m scripts.init_storage` (el mismo script que usa docker-compose con MinIO).
+  de Railway se normaliza sola al driver `psycopg`.
+- **AI for Pet en producción:** requiere aprobación explícita de AI for Pet para la
+  organización, claves `tt_pk_live_` y el SHA-256 de la llave de publicación (y el de Google
+  Play App Signing si se usa). La clave de prueba vence el 2026-11-18.
 - **Dominio propio con SSL:** pendiente.
 
-## 11. Decisiones registradas
+## 10. Decisiones registradas
 
 | Decisión | Motivo |
 |---|---|
-| Clasificación de imagen completa, sin YOLO/Ultralytics | AGPL-3.0 obligaría a liberar el código; además la tarea no es detección de objetos |
-| Tabla `uploads` para la pertenencia, no el uid en la ruta | Permite uso único y trazabilidad; la ruta queda `tmp/<uuid>` |
-| Tamaño y tipo exactos firmados en el PUT | R2 no soporta POST firmado con rango de tamaño |
-| PyJWT en vez de `firebase-admin` | `firebase-admin` exige una cuenta de servicio fuera de Google Cloud; PyJWT solo necesita el id del proyecto |
-| MinIO de Chainguard, fijado por digest | MinIO dejó de publicar imágenes oficiales en Docker Hub y quay.io |
-| Tests contra Postgres y MinIO reales | Los CHECK y enums son de Postgres; la firma solo se prueba contra un servidor S3 |
-| `uv` + `uv.lock` | Builds reproducibles y Python 3.11 aislado del Python del sistema |
+| SDK de AI for Pet en lugar de modelo propio | Decisión del equipo (2026-11-04) |
+| Sin almacenamiento propio de fotos (se retiró R2/MinIO) | El SDK no entrega la foto original, solo enlaces a recortes en sus servidores |
+| Una foto por escaneo, sin cuestionario | Flujo estándar del SDK; el cuestionario no está en español |
+| SDK Android fijado en 2.2.3 | Es la versión documentada para las claves publicables actuales |
+| `client_scan_id` idempotente | Reintentar un envío fallido no duplica análisis ni consume otro del plan |
+| Migración 0002 en lugar de reescribir la 0001 | La 0001 ya estaba aplicada; queda registro del cambio |
+| PyJWT en vez de `firebase-admin` | `firebase-admin` exige una cuenta de servicio fuera de Google Cloud |
+| Tests contra PostgreSQL real | Los CHECK, enums y JSONB son de Postgres |
+| Sin YOLO/Ultralytics | AGPL-3.0 (decisión original, se mantiene) |
