@@ -5,9 +5,7 @@ from fastapi import Depends, Request
 from sqlalchemy.orm import Session
 
 from app.core.config import Settings
-from app.inference.base import InferenceBackend
 from app.models import User
-from app.services.storage import Storage
 from app.services.user_service import get_or_create_user
 
 
@@ -23,18 +21,8 @@ def get_db(request: Request) -> Iterator[Session]:
         session.close()
 
 
-def get_storage(request: Request) -> Storage:
-    return request.app.state.storage
-
-
-def get_inference(request: Request) -> InferenceBackend:
-    return request.app.state.inference
-
-
 DbSession = Annotated[Session, Depends(get_db)]
 AppSettings = Annotated[Settings, Depends(get_settings_dep)]
-StorageDep = Annotated[Storage, Depends(get_storage)]
-InferenceDep = Annotated[InferenceBackend, Depends(get_inference)]
 
 
 def get_current_user(request: Request, db: DbSession) -> User:

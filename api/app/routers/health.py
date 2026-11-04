@@ -27,7 +27,6 @@ def health(request: Request, response: Response) -> HealthOut:
         status="ok" if database == "ok" else "degraded",
         version=__version__,
         environment=state.settings.env,
-        model_version=state.inference.version,
-        inference_backend=state.settings.inference_backend,
+        analysis_provider="aiforpet",
         database=database,
     )

@@ -1,7 +1,7 @@
 [project]
 name = "mandidog-api"
 version = "0.1.0"
-description = "API de MandiDog IA: tamizaje orientativo de patologías mandibulares en perros"
+description = "API de MandiDog IA: historial de escaneos dentales hechos con el SDK de AI for Pet"
 requires-python = ">=3.11,<3.12"
 dependencies = [
     "fastapi>=0.115",
@@ -10,9 +10,6 @@ dependencies = [
     "alembic>=1.14",
     "psycopg[binary]>=3.2",
     "pydantic-settings>=2.6",
-    "boto3>=1.36",
-    "pillow>=11.0",
-    "numpy>=2.0",
     "pyjwt[crypto]>=2.10",
 ]
 
@@ -34,7 +31,6 @@ addopts = "-ra"
 
 [tool.coverage.run]
 source = ["app"]
-omit = ["app/inference/keras_backend.py"]
 
 [tool.ruff]
 line-length = 100

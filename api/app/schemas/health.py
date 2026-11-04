@@ -7,6 +7,5 @@ class HealthOut(BaseModel):
     status: Literal["ok", "degraded"]
     version: str
     environment: str
-    model_version: str
-    inference_backend: str
+    analysis_provider: Literal["aiforpet"]
     database: Literal["ok", "error"]

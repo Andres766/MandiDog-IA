@@ -34,7 +34,6 @@ COPY --from=builder /opt/venv /opt/venv
 COPY alembic.ini ./
 COPY alembic ./alembic
 COPY app ./app
-COPY scripts ./scripts
 COPY docker/start.sh ./docker/start.sh
 RUN useradd --system --uid 10001 --no-create-home mandidog
 USER mandidog
