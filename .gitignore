@@ -2,6 +2,8 @@
 .env
 .env.*
 !.env.example
+# Clave del SDK de AI for Pet para compilar la app (ver app/dart_defines.example.json)
+app/dart_defines.local.json
 .venv/
 venv/
 

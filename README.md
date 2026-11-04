@@ -12,8 +12,8 @@ Proyecto de grado de Ingeniería de Software, Universidad Cooperativa de Colombi
 
 | Parte | Carpeta | Estado |
 |---|---|---|
-| API | `api/` | ✅ Lista en local: 98 pruebas, 98 % de cobertura |
-| Integración AI for Pet | `app/android/` + `app/lib/features/capture/` | ✅ Puente nativo y pantalla de prueba; falta probar en un celular real |
+| API | `api/` | ✅ Lista en local: 103 pruebas |
+| Integración AI for Pet | `app/android/` + `app/lib/features/capture/` | ✅ Puente nativo, pantalla de prueba conectada a la API y simulación en navegador; falta probar el SDK en un celular real |
 | App (mascotas, historial, autorización, Firebase) | `app/` | Pendiente (etapa 3) |
 | Despliegue | Railway | Pendiente |
 
@@ -61,7 +61,7 @@ La API aplica las migraciones al arrancar. Los puertos se cambian en `.env`
 ### Correr las pruebas
 
 ```bash
-docker compose run --rm api pytest                  # 98 pruebas
+docker compose run --rm api pytest                  # 103 pruebas
 docker compose run --rm api pytest --cov=app        # con cobertura
 docker compose run --rm api sh -c "ruff check . && ruff format --check ."
 ```
@@ -159,11 +159,31 @@ abre la cámara de dientes de AI for Pet y muestra el JSON que devuelve.
 ```bash
 cd app
 flutter devices                      # el celular debe aparecer
-flutter run --dart-define=AIFORPET_SDK_KEY=tt_pk_test_...
+flutter run --dart-define-from-file=dart_defines.local.json
 ```
+
+`dart_defines.local.json` se crea copiando `dart_defines.example.json` y poniendo ahí la
+clave completa. Está en el `.gitignore`.
 
 Cada escaneo consume uno de los análisis del plan de prueba (100, vence el 2026-11-18).
 La clave nunca se escribe en el código ni se sube a git.
+
+### Probar en el navegador (sin SDK)
+
+El SDK de AI for Pet solo existe en Android, así que en el navegador la pantalla de prueba
+**simula** el escaneo con el resultado de ejemplo oficial de AI for Pet. Todo lo demás es
+real: autorización, mascota y registro en la API local (queda marcado como
+`2.2.3-simulacion`). Con la API corriendo (`docker compose up -d`):
+
+```bash
+cd app
+flutter build web --dart-define=API_BASE_URL=http://localhost:8008 --dart-define=DEV_USER=prueba-chrome
+python -m http.server 5050 --bind 127.0.0.1 -d build/web
+# abrir http://localhost:5050 en Chrome
+```
+
+El puerto 5050 es el que la API autoriza en `CORS_ALLOW_ORIGINS` (`.env`). La app Android no
+usa CORS; en producción esa variable queda vacía.
 
 ### Pruebas de la app
 
