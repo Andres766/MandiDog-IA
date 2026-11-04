@@ -1,0 +1,47 @@
+# --- Secretos y entornos ---
+.env
+.env.*
+!.env.example
+.venv/
+venv/
+
+# --- Python ---
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+.coverage.*
+coverage.xml
+htmlcov/
+
+# --- Pesos de modelos (nunca en git) ---
+*.keras
+*.h5
+*.hdf5
+*.tflite
+*.onnx
+*.pb
+ml/artifacts/
+
+# --- Datasets (imágenes de pacientes, nunca en git) ---
+ml/data/
+*.zip
+*.tar.gz
+
+# --- Builds ---
+build/
+dist/
+*.egg-info/
+app/.dart_tool/
+app/build/
+*.apk
+*.aab
+
+# --- Editor / SO ---
+.idea/
+.vscode/
+*.swp
+.DS_Store
+Thumbs.db
