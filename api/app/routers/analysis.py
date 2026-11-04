@@ -1,48 +1,47 @@
-import uuid
+import json
 
 from fastapi import APIRouter, Response, status
 
-from app.deps import AppSettings, CurrentUser, DbSession, InferenceDep, StorageDep
+from app.deps import AppSettings, CurrentUser, DbSession
 from app.schemas.analysis import AnalysisCreateIn, AnalysisOut
-from app.services.analysis_service import AnalysisRequest, AnalysisService
-from app.services.pet_service import revoke_image_consent
+from app.services.analysis_service import ScanSubmission, register_scan
 
 router = APIRouter(prefix="/api/v1", tags=["análisis"])
 
 
-@router.post("/analysis", response_model=AnalysisOut, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/analysis",
+    response_model=AnalysisOut,
+    status_code=status.HTTP_201_CREATED,
+    responses={200: {"model": AnalysisOut, "description": "Reintento: el escaneo ya existía"}},
+)
 def create_analysis(
     body: AnalysisCreateIn,
+    response: Response,
     user: CurrentUser,
     db: DbSession,
-    storage: StorageDep,
-    inference: InferenceDep,
     settings: AppSettings,
 ) -> AnalysisOut:
-    """Procesa una foto ya subida con la URL firmada.
+    """Guarda el resultado de un escaneo dental hecho con el SDK de AI for Pet.
 
     Errores relevantes para la app:
-    - 404 `upload_not_found` / `pet_not_found` / `upload_missing`
-    - 409 `upload_already_used` / `consent_policy_outdated`
-    - 422 `image_quality` (details trae qué corregir) / `upload_mismatch`
+    - 404 `pet_not_found`
+    - 409 `consent_required` / `scan_id_conflict`
+    - 422 `scan_result_invalid` / `scan_result_mismatch`
     """
-    service = AnalysisService(db, storage, inference, settings)
-    analysis = service.create(
+    registered = register_scan(
+        db,
+        settings,
         user,
-        AnalysisRequest(
+        ScanSubmission(
             pet_id=body.pet_id,
-            object_key=body.object_key,
-            image_consent=body.image_consent,
-            consent_policy_version=body.consent_policy_version,
+            client_scan_id=body.client_scan_id,
+            sdk_platform=body.sdk_platform,
+            sdk_version=body.sdk_version,
+            result=body.result,
+            result_size=len(json.dumps(body.result)),
         ),
     )
-    return AnalysisOut.from_model(analysis)
-
-
-@router.delete("/analyses/{analysis_id}/image", status_code=status.HTTP_204_NO_CONTENT)
-def revoke_image(
-    analysis_id: uuid.UUID, user: CurrentUser, db: DbSession, storage: StorageDep
-) -> Response:
-    """Revoca la autorización de uso de la foto: la borra y deja constancia de la fecha."""
-    revoke_image_consent(db, storage, user, analysis_id)
-    return Response(status_code=status.HTTP_204_NO_CONTENT)
+    if not registered.created:
+        response.status_code = status.HTTP_200_OK
+    return AnalysisOut.from_model(registered.analysis)

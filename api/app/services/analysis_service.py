@@ -1,170 +1,127 @@
-"""Orquesta el análisis: pertenencia → validación del objeto → calidad → inferencia →
-consentimiento → persistencia. El temporal en tmp/ nunca se conserva."""
+"""Registro de un escaneo dental hecho con el SDK de AI for Pet.
+
+La foto nunca pasa por esta API: el SDK la toma, la analiza en los servidores de AI for Pet
+y entrega a la app un JSON. La app lo envía aquí para guardarlo en el historial.
+"""
 
 import logging
-import time
 import uuid
 from dataclasses import dataclass
-from datetime import UTC, datetime
-from typing import NoReturn
+from typing import Any
 
+from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.core.config import Settings
-from app.core.errors import AppError, ConflictError, NotFoundError, UnprocessableError
-from app.inference.base import InferenceBackend
-from app.models import Analysis, Upload, User
-from app.services.image_quality import QualityThresholds, assess_quality
+from app.core.errors import ConflictError, UnprocessableError
+from app.models import Analysis, Pet, User
+from app.services.aiforpet import ToothScan, parse_tooth_scan
 from app.services.pet_service import get_owned_pet
-from app.services.preprocessing import preprocess
-from app.services.risk import assess_risk
-from app.services.storage import PERMANENT_PREFIX, TMP_PREFIX, Storage, StorageError
-from app.services.upload_service import EXTENSIONS, claim_upload
 
 logger = logging.getLogger("app.analysis")
 
 
 @dataclass(frozen=True)
-class AnalysisRequest:
+class ScanSubmission:
     pet_id: uuid.UUID
-    object_key: str
-    image_consent: bool
-    consent_policy_version: str | None
+    client_scan_id: uuid.UUID
+    sdk_platform: str
+    sdk_version: str
+    result: dict[str, Any]
+    result_size: int
 
 
-class AnalysisService:
-    def __init__(
-        self, db: Session, storage: Storage, inference: InferenceBackend, settings: Settings
-    ) -> None:
-        self.db = db
-        self.storage = storage
-        self.inference = inference
-        self.settings = settings
+@dataclass(frozen=True)
+class RegisteredAnalysis:
+    analysis: Analysis
+    created: bool
 
-    def create(self, user: User, request: AnalysisRequest) -> Analysis:
-        settings = self.settings
-        if (
-            request.image_consent
-            and request.consent_policy_version != settings.consent_policy_version
-        ):
-            raise ConflictError(
-                "consent_policy_outdated",
-                "El texto de autorización cambió. Actualiza la app y vuelve a leerlo.",
-            )
 
-        pet = get_owned_pet(self.db, user, request.pet_id)
-        upload = claim_upload(self.db, user, request.object_key)
+def _same_uuid(value: str | None, expected: uuid.UUID) -> bool:
+    try:
+        return value is not None and uuid.UUID(value) == expected
+    except ValueError:
+        return False
 
-        # 1. Validar el objeto con head_object ANTES de descargarlo.
-        info = self.storage.head(upload.object_key)
-        if info is None:
-            self.db.rollback()  # deshace el reclamo: la app puede reintentar la subida
-            raise NotFoundError(
-                "upload_missing", "La foto no terminó de subirse. Vuelve a intentarlo."
-            )
-        if (
-            info.size > settings.upload_max_bytes
-            or info.size != upload.content_length
-            or info.content_type != upload.content_type
-        ):
-            self._reject(
-                upload,
-                UnprocessableError(
-                    "upload_mismatch",
-                    "La foto recibida no coincide con la autorizada. Tómala de nuevo.",
-                ),
-            )
 
-        # 2. Descargar y controlar calidad.
-        data = self.storage.download(upload.object_key, max_bytes=settings.upload_max_bytes)
-        report = assess_quality(
-            data,
-            upload.content_type,
-            QualityThresholds(
-                min_side_px=settings.quality_min_side_px,
-                min_blur_variance=settings.quality_min_blur_variance,
-                min_luminance=settings.quality_min_luminance,
-                max_luminance=settings.quality_max_luminance,
-            ),
+def _ensure_result_belongs(scan: ToothScan, user: User, pet: Pet) -> None:
+    """La app le pasa al SDK nuestro id de usuario y de mascota; el SDK los devuelve."""
+    if scan.user_id is not None and not _same_uuid(scan.user_id, user.id):
+        raise UnprocessableError(
+            "scan_result_mismatch", "El resultado del escaneo no corresponde a tu usuario."
         )
-        if not report.ok:
-            self._reject(
-                upload,
-                UnprocessableError(
-                    "image_quality",
-                    "La foto no tiene la calidad suficiente para analizarla.",
-                    details=[{"code": i.code, "message": i.message} for i in report.issues],
-                ),
-            )
-        assert report.image is not None
-
-        # 3. Preprocesar e inferir.
-        batch = preprocess(report.image, self.inference.preprocessing)
-        started = time.perf_counter()
-        probability = self.inference.predict(batch)
-        inference_ms = round((time.perf_counter() - started) * 1000)
-        risk = assess_risk(
-            probability,
-            yellow=settings.risk_threshold_yellow,
-            red=settings.risk_threshold_red,
+    if scan.pet_id is not None and not _same_uuid(scan.pet_id, pet.id):
+        raise UnprocessableError(
+            "scan_result_mismatch", "El resultado del escaneo no corresponde a esta mascota."
         )
 
-        analysis = Analysis(
-            id=uuid.uuid4(),
-            pet_id=pet.id,
-            risk_level=risk.level,
-            confidence=risk.confidence,
-            probability_signs=risk.probability_signs,
-            model_version=self.inference.version,
-            recommendation=risk.recommendation,
-            blur_variance=report.blur_variance,
-            luminance=report.luminance,
-            image_width=report.width,
-            image_height=report.height,
-            inference_ms=inference_ms,
-            image_consent=request.image_consent,
+
+def _previous(db: Session, user: User, submission: ScanSubmission) -> RegisteredAnalysis | None:
+    """Si la app reintenta el envío del mismo escaneo, devuelve el análisis ya guardado."""
+    row = db.execute(
+        select(Analysis, Pet.owner_id)
+        .join(Pet, Pet.id == Analysis.pet_id)
+        .where(Analysis.client_scan_id == submission.client_scan_id)
+    ).one_or_none()
+    if row is None:
+        return None
+    analysis, owner_id = row
+    if owner_id != user.id or analysis.pet_id != submission.pet_id:
+        raise ConflictError(
+            "scan_id_conflict", "Ese escaneo ya fue registrado con otros datos. Repite el escaneo."
+        )
+    return RegisteredAnalysis(analysis=analysis, created=False)
+
+
+def register_scan(
+    db: Session, settings: Settings, user: User, submission: ScanSubmission
+) -> RegisteredAnalysis:
+    previous = _previous(db, user, submission)
+    if previous is not None:
+        return previous
+
+    if user.consent_policy_version != settings.consent_policy_version:
+        raise ConflictError(
+            "consent_required",
+            "Debes aceptar la autorización de tratamiento de datos vigente antes de analizar.",
         )
 
-        # 4. Consentimiento: solo con autorización se copia a permanent/.
-        permanent_key: str | None = None
-        if request.image_consent:
-            permanent_key = f"{PERMANENT_PREFIX}{analysis.id}.{EXTENSIONS[upload.content_type]}"
-            self.storage.copy(upload.object_key, permanent_key)
-            analysis.image_key = permanent_key
-            analysis.consent_at = datetime.now(UTC)
-            analysis.consent_policy_version = settings.consent_policy_version
+    pet = get_owned_pet(db, user, submission.pet_id)
+    scan = parse_tooth_scan(submission.result, raw_size=submission.result_size)
+    _ensure_result_belongs(scan, user, pet)
 
-        self.db.add(analysis)
-        try:
-            self.db.commit()
-        except Exception:
-            self.db.rollback()
-            if permanent_key:
-                self._delete_quietly(permanent_key)
+    analysis = Analysis(
+        id=uuid.uuid4(),
+        pet_id=pet.id,
+        client_scan_id=submission.client_scan_id,
+        risk_level=scan.risk_level,
+        provider_status=scan.provider_status,
+        part=scan.part,
+        sub_part=scan.sub_part,
+        findings=[finding.as_dict() for finding in scan.findings],
+        provider_result=submission.result,
+        provider_analyzed_at=scan.analyzed_at,
+        model_version=f"aiforpet-scansdk-{submission.sdk_platform}/{submission.sdk_version}",
+        recommendation=scan.recommendation,
+        consent_policy_version=settings.consent_policy_version,
+    )
+    db.add(analysis)
+    try:
+        db.commit()
+    except IntegrityError:
+        # Dos envíos simultáneos del mismo escaneo: gana el primero.
+        db.rollback()
+        previous = _previous(db, user, submission)
+        if previous is None:
             raise
+        return previous
 
-        self._delete_quietly(upload.object_key)
-        logger.info(
-            "Análisis %s: nivel=%s p=%.4f inferencia=%dms consentimiento=%s",
-            analysis.id,
-            risk.level.value,
-            risk.probability_signs,
-            inference_ms,
-            request.image_consent,
-        )
-        return analysis
-
-    def _reject(self, upload: Upload, error: AppError) -> NoReturn:
-        """Rechazo definitivo: se borra el temporal y la carga queda consumida."""
-        self._delete_quietly(upload.object_key)
-        self.db.commit()
-        raise error
-
-    def _delete_quietly(self, key: str) -> None:
-        try:
-            self.storage.delete(key)
-        except StorageError:
-            if key.startswith(TMP_PREFIX):
-                logger.warning("No se pudo borrar %s; lo borrará la regla de ciclo de vida", key)
-            else:
-                logger.error("No se pudo borrar %s: objeto huérfano, revisar a mano", key)
+    logger.info(
+        "Análisis %s registrado: estado=%s nivel=%s hallazgos=%s",
+        analysis.id,
+        scan.provider_status,
+        scan.risk_level.value,
+        [f"{f.code}:{f.status}" for f in scan.findings],
+    )
+    return RegisteredAnalysis(analysis=analysis, created=True)

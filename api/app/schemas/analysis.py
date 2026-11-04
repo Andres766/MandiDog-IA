@@ -1,34 +1,37 @@
 import uuid
 from datetime import datetime
+from typing import Any, Literal
 
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, Field
 
 from app.models import Analysis, RiskLevel
-from app.services.upload_service import OBJECT_KEY_PATTERN
 
 
 class AnalysisCreateIn(BaseModel):
     pet_id: uuid.UUID
-    object_key: str = Field(pattern=OBJECT_KEY_PATTERN)
-    image_consent: bool = False
-    consent_policy_version: str | None = Field(
-        default=None,
-        max_length=50,
-        description="Versión del texto de autorización que vio el usuario. "
-        "Obligatoria si image_consent=true.",
+    client_scan_id: uuid.UUID = Field(
+        description="UUID que genera la app antes de escanear. Si el envío falla, reintenta "
+        "con el mismo valor: la API no duplica el análisis."
+    )
+    sdk_platform: Literal["android", "ios"]
+    sdk_version: str = Field(pattern=r"^[0-9]+(\.[0-9]+){1,3}([-+][0-9A-Za-z.]+)?$")
+    result: dict[str, Any] = Field(
+        description="JSON tal como lo devolvió el SDK de AI for Pet (escaneo de dientes)."
     )
 
-    @model_validator(mode="after")
-    def _version_si_hay_consentimiento(self) -> "AnalysisCreateIn":
-        if self.image_consent and not self.consent_policy_version:
-            raise ValueError("consent_policy_version es obligatoria cuando image_consent=true")
-        return self
+
+class FindingOut(BaseModel):
+    code: str
+    name: str = Field(description="Nombre en español para mostrar")
+    status: Literal["normal", "abnormal", "unknown"]
 
 
 class AnalysisOut(BaseModel):
     analysis_id: uuid.UUID
     risk_level: RiskLevel
-    confidence: float
+    provider_status: Literal["NORMAL", "CAUTION", "WARNING"]
+    findings: list[FindingOut]
+    sub_part: Literal["TLEFT", "TCENTER", "TRIGHT"] | None
     model_version: str
     recommendation: str
     created_at: datetime
@@ -38,22 +41,10 @@ class AnalysisOut(BaseModel):
         return cls(
             analysis_id=analysis.id,
             risk_level=analysis.risk_level,
-            confidence=analysis.confidence,
+            provider_status=analysis.provider_status,
+            findings=[FindingOut.model_validate(f) for f in analysis.findings],
+            sub_part=analysis.sub_part,
             model_version=analysis.model_version,
             recommendation=analysis.recommendation,
             created_at=analysis.created_at,
-        )
-
-
-class AnalysisHistoryItem(AnalysisOut):
-    image_consent: bool
-    has_image: bool
-
-    @classmethod
-    def from_model(cls, analysis: Analysis) -> "AnalysisHistoryItem":
-        base = AnalysisOut.from_model(analysis).model_dump()
-        return cls(
-            **base,
-            image_consent=analysis.image_consent,
-            has_image=analysis.image_key is not None,
         )

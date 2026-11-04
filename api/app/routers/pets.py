@@ -3,8 +3,8 @@ from typing import Annotated
 
 from fastapi import APIRouter, Query, Response, status
 
-from app.deps import CurrentUser, DbSession, StorageDep
-from app.schemas.analysis import AnalysisHistoryItem
+from app.deps import CurrentUser, DbSession
+from app.schemas.analysis import AnalysisOut
 from app.schemas.pet import PetCreateIn, PetOut, PetUpdateIn
 from app.services import pet_service
 
@@ -34,22 +34,20 @@ def update_pet(pet_id: uuid.UUID, body: PetUpdateIn, user: CurrentUser, db: DbSe
 
 
 @router.delete("/{pet_id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_pet(
-    pet_id: uuid.UUID, user: CurrentUser, db: DbSession, storage: StorageDep
-) -> Response:
-    """Borra la mascota, su historial y las fotos conservadas en el almacenamiento."""
-    pet_service.delete_pet(db, storage, user, pet_id)
+def delete_pet(pet_id: uuid.UUID, user: CurrentUser, db: DbSession) -> Response:
+    """Borra la mascota y su historial."""
+    pet_service.delete_pet(db, user, pet_id)
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
-@router.get("/{pet_id}/analyses", response_model=list[AnalysisHistoryItem])
+@router.get("/{pet_id}/analyses", response_model=list[AnalysisOut])
 def history(
     pet_id: uuid.UUID,
     user: CurrentUser,
     db: DbSession,
     limit: Annotated[int, Query(ge=1, le=100)] = 20,
     offset: Annotated[int, Query(ge=0)] = 0,
-) -> list[AnalysisHistoryItem]:
+) -> list[AnalysisOut]:
     """Historial de análisis de la mascota, del más reciente al más antiguo."""
     analyses = pet_service.list_analyses(db, user, pet_id, limit=limit, offset=offset)
-    return [AnalysisHistoryItem.from_model(a) for a in analyses]
+    return [AnalysisOut.from_model(a) for a in analyses]
