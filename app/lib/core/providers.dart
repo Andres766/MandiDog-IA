@@ -51,6 +51,14 @@ final historyProvider = FutureProvider.family<List<Analysis>, String>(
   (ref, petId) => ref.watch(apiProvider).history(petId),
 );
 
+final pendingCasesProvider = FutureProvider<List<PendingCase>>(
+  (ref) => ref.watch(apiProvider).pendingCases(),
+);
+
+final validationSummaryProvider = FutureProvider<ValidationSummary>(
+  (ref) => ref.watch(apiProvider).validationSummary(),
+);
+
 /// Tras registrar o borrar algo, refresca lo que muestra la app.
 void refreshPetData(WidgetRef ref, String petId) {
   ref.invalidate(petsProvider);

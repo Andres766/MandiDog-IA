@@ -75,6 +75,28 @@ class MandiDogApi {
       Analysis.fromJson(a as Map<String, dynamic>),
   ];
 
+  // Validación clínica (solo veterinarios).
+  Future<List<PendingCase>> pendingCases() async => [
+    for (final c in await _send('GET', '/api/v1/validations/pending') as List)
+      PendingCase.fromJson(c as Map<String, dynamic>),
+  ];
+
+  Future<ValidationReveal> submitValidation(
+    String analysisId,
+    VetAssessment assessment,
+    String? notes,
+  ) async => ValidationReveal.fromJson(
+    await _send('POST', '/api/v1/analyses/$analysisId/validation', {
+      'vet_assessment': assessment.api,
+      if (notes != null && notes.trim().isNotEmpty) 'notes': notes.trim(),
+    }),
+  );
+
+  Future<ValidationSummary> validationSummary() async =>
+      ValidationSummary.fromJson(
+        await _send('GET', '/api/v1/validations/summary'),
+      );
+
   /// Registra un escaneo. Si falla la red, reintentar con el MISMO [clientScanId]:
   /// la API devuelve el análisis ya guardado en vez de duplicarlo.
   Future<Analysis> submitScan({

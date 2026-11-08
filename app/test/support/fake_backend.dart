@@ -24,6 +24,31 @@ class FakeBackend {
   final submissions = <Map<String, dynamic>>[];
   bool failNextSubmit = false;
   bool accountDeleted = false;
+  String role = 'owner';
+  final pendingCases = <Map<String, dynamic>>[];
+  final validations = <Map<String, dynamic>>[];
+
+  /// Caso pendiente de validación; [aiStatus] es lo que la API revela al final.
+  Map<String, dynamic> addPendingCase(
+    String petName, {
+    String aiStatus = 'WARNING',
+    String? breed,
+  }) {
+    final item = {
+      'analysis_id': '00000000-0000-4000-8000-0000000002${_ids++}',
+      'created_at': '2026-11-04T15:00:00Z',
+      'sub_part': 'TCENTER',
+      'pet_name': petName,
+      'breed': breed,
+      'sex': 'unknown',
+      'birth_date': null,
+      'photo_urls': <String>[],
+      '_ai_status': aiStatus,
+    };
+    pendingCases.add(item);
+    return item;
+  }
+
   int _ids = 10;
 
   void acceptConsent() => acceptedVersion = currentPolicyVersion;
@@ -57,7 +82,7 @@ class FakeBackend {
     'id': kUserId,
     'email': null,
     'display_name': 'ana',
-    'role': 'owner',
+    'role': role,
     'consent': {
       'current_version': currentPolicyVersion,
       'accepted_version': acceptedVersion,
@@ -90,6 +115,13 @@ class FakeBackend {
     if (route == 'DELETE /api/v1/me') {
       accountDeleted = true;
       return http.Response('', 204);
+    }
+    if (path.startsWith('/api/v1/validations') ||
+        path.endsWith('/validation')) {
+      if (role == 'owner') {
+        return _error(403, 'vet_only', 'Solo para veterinarios.');
+      }
+      return _validation(route, path, body);
     }
     if (route == 'GET /api/v1/pets') return _json(pets);
     if (route == 'POST /api/v1/pets') {
@@ -125,6 +157,81 @@ class FakeBackend {
         throw http.ClientException('sin red');
       }
       return _json(_registerScan(body), 201);
+    }
+    return _error(404, 'not_found', 'Ruta no simulada: $route');
+  }
+
+  http.Response _validation(String route, String path, Object? body) {
+    if (route == 'GET /api/v1/validations/pending') {
+      return _json([
+        for (final c in pendingCases)
+          {...c}..removeWhere((k, _) => k.startsWith('_')),
+      ]);
+    }
+    if (route == 'GET /api/v1/validations/summary') {
+      final evaluable = validations
+          .where((v) => v['agreement'] != null)
+          .toList();
+      int count(bool aiSigns, bool vetSigns) => evaluable
+          .where(
+            (v) =>
+                v['ai_sees_signs'] == aiSigns &&
+                (v['vet_assessment'] == 'con_signos') == vetSigns,
+          )
+          .length;
+      final tp = count(true, true), fn = count(false, true);
+      final fp = count(true, false), tn = count(false, false);
+      double? ratio(int a, int b) => b == 0 ? null : a / b;
+      final matrix = {
+        'n': evaluable.length,
+        'true_positive': tp,
+        'false_positive': fp,
+        'false_negative': fn,
+        'true_negative': tn,
+        'sensitivity': ratio(tp, tp + fn),
+        'specificity': ratio(tn, tn + fp),
+        'accuracy': ratio(tp + tn, evaluable.length),
+      };
+      return _json({
+        'validations': validations.length,
+        'not_evaluable': validations.length - evaluable.length,
+        'criterion': 'La IA "ve signos" cuando su estado no es NORMAL.',
+        'overall': matrix,
+        'by_cephalic_group': {if (evaluable.isNotEmpty) 'Braquicéfalo': matrix},
+        'by_breed': {if (evaluable.isNotEmpty) 'Pug': matrix},
+      });
+    }
+    final match = RegExp(
+      r'^/api/v1/analyses/([^/]+)/validation$',
+    ).firstMatch(path);
+    if (match != null && route.startsWith('POST')) {
+      final item = pendingCases
+          .where((c) => c['analysis_id'] == match.group(1))
+          .firstOrNull;
+      if (item == null) {
+        return _error(409, 'already_validated', 'Ya valoraste este caso.');
+      }
+      pendingCases.remove(item);
+      final status = item['_ai_status'] as String;
+      final data = body! as Map<String, dynamic>;
+      final assessment = data['vet_assessment'];
+      final aiSigns = status != 'NORMAL';
+      final reveal = {
+        'validation_id': '00000000-0000-4000-8000-0000000003${_ids++}',
+        'vet_assessment': assessment,
+        'ai_risk_level': const {
+          'NORMAL': 'green',
+          'CAUTION': 'yellow',
+          'WARNING': 'red',
+        }[status],
+        'ai_provider_status': status,
+        'ai_sees_signs': aiSigns,
+        'agreement': assessment == 'no_evaluable'
+            ? null
+            : aiSigns == (assessment == 'con_signos'),
+      };
+      validations.add({...reveal, 'notes': data['notes']});
+      return _json(reveal, 201);
     }
     return _error(404, 'not_found', 'Ruta no simulada: $route');
   }

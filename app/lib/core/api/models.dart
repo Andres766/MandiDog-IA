@@ -32,6 +32,7 @@ class UserProfile {
     required this.email,
     required this.displayName,
     required this.consent,
+    this.role = 'owner',
   });
 
   factory UserProfile.fromJson(Map<String, dynamic> json) => UserProfile(
@@ -39,12 +40,18 @@ class UserProfile {
     email: json['email'] as String?,
     displayName: json['display_name'] as String?,
     consent: Consent.fromJson(json['consent'] as Map<String, dynamic>),
+    role: json['role'] as String? ?? 'owner',
   );
 
   final String id;
   final String? email;
   final String? displayName;
   final Consent consent;
+
+  /// owner, vet o admin. Veterinarios y administradores ven la validación clínica.
+  final String role;
+
+  bool get canValidate => role == 'vet' || role == 'admin';
 }
 
 enum PetSex {
@@ -199,4 +206,163 @@ class Analysis {
 
   List<Finding> get abnormalFindings =>
       findings.where((f) => f.status == FindingStatus.abnormal).toList();
+}
+
+// ------------------------------------------------------- validación clínica
+
+enum VetAssessment {
+  sinSignos(
+    'sin_signos',
+    'Sin signos',
+    'No observo sarro ni inflamación de encías.',
+  ),
+  conSignos(
+    'con_signos',
+    'Con signos',
+    'Observo sarro, inflamación u otro signo dental.',
+  ),
+  noEvaluable(
+    'no_evaluable',
+    'No evaluable',
+    'No puedo valorar este caso con certeza.',
+  );
+
+  const VetAssessment(this.api, this.label, this.help);
+
+  final String api;
+  final String label;
+  final String help;
+
+  static VetAssessment parse(String? value) => VetAssessment.values.firstWhere(
+    (v) => v.api == value,
+    orElse: () => VetAssessment.noEvaluable,
+  );
+}
+
+/// Caso para valorar a ciegas: no trae el resultado de la IA.
+class PendingCase {
+  const PendingCase({
+    required this.analysisId,
+    required this.createdAt,
+    required this.subPart,
+    required this.petName,
+    required this.breed,
+    required this.photoUrls,
+  });
+
+  factory PendingCase.fromJson(Map<String, dynamic> json) => PendingCase(
+    analysisId: json['analysis_id'] as String,
+    createdAt: _date(json['created_at'])!,
+    subPart: json['sub_part'] as String?,
+    petName: json['pet_name'] as String,
+    breed: json['breed'] as String?,
+    photoUrls: (json['photo_urls'] as List).cast<String>(),
+  );
+
+  final String analysisId;
+  final DateTime createdAt;
+  final String? subPart;
+  final String petName;
+  final String? breed;
+  final List<String> photoUrls;
+
+  String? get positionLabel => switch (subPart) {
+    'TLEFT' => 'Dientes del lado izquierdo',
+    'TCENTER' => 'Dientes del frente',
+    'TRIGHT' => 'Dientes del lado derecho',
+    _ => null,
+  };
+}
+
+/// Lo que la API revela después de registrar la valoración.
+class ValidationReveal {
+  const ValidationReveal({
+    required this.assessment,
+    required this.aiRiskLevel,
+    required this.aiSeesSigns,
+    required this.agreement,
+  });
+
+  factory ValidationReveal.fromJson(Map<String, dynamic> json) =>
+      ValidationReveal(
+        assessment: VetAssessment.parse(json['vet_assessment'] as String?),
+        aiRiskLevel:
+            RiskLevel.parse(json['ai_risk_level'] as String?) ?? RiskLevel.red,
+        aiSeesSigns: json['ai_sees_signs'] as bool,
+        agreement: json['agreement'] as bool?,
+      );
+
+  final VetAssessment assessment;
+  final RiskLevel aiRiskLevel;
+  final bool aiSeesSigns;
+  final bool? agreement;
+}
+
+class AgreementMatrix {
+  const AgreementMatrix({
+    required this.n,
+    required this.truePositive,
+    required this.falsePositive,
+    required this.falseNegative,
+    required this.trueNegative,
+    required this.sensitivity,
+    required this.specificity,
+    required this.accuracy,
+  });
+
+  factory AgreementMatrix.fromJson(Map<String, dynamic> json) =>
+      AgreementMatrix(
+        n: json['n'] as int,
+        truePositive: json['true_positive'] as int,
+        falsePositive: json['false_positive'] as int,
+        falseNegative: json['false_negative'] as int,
+        trueNegative: json['true_negative'] as int,
+        sensitivity: (json['sensitivity'] as num?)?.toDouble(),
+        specificity: (json['specificity'] as num?)?.toDouble(),
+        accuracy: (json['accuracy'] as num?)?.toDouble(),
+      );
+
+  final int n;
+  final int truePositive;
+  final int falsePositive;
+  final int falseNegative;
+  final int trueNegative;
+  final double? sensitivity;
+  final double? specificity;
+  final double? accuracy;
+}
+
+class ValidationSummary {
+  const ValidationSummary({
+    required this.validations,
+    required this.notEvaluable,
+    required this.criterion,
+    required this.overall,
+    required this.byCephalicGroup,
+    required this.byBreed,
+  });
+
+  factory ValidationSummary.fromJson(Map<String, dynamic> json) {
+    Map<String, AgreementMatrix> group(Object? raw) => {
+      for (final e in (raw as Map<String, dynamic>).entries)
+        e.key: AgreementMatrix.fromJson(e.value as Map<String, dynamic>),
+    };
+    return ValidationSummary(
+      validations: json['validations'] as int,
+      notEvaluable: json['not_evaluable'] as int,
+      criterion: json['criterion'] as String,
+      overall: AgreementMatrix.fromJson(
+        json['overall'] as Map<String, dynamic>,
+      ),
+      byCephalicGroup: group(json['by_cephalic_group']),
+      byBreed: group(json['by_breed']),
+    );
+  }
+
+  final int validations;
+  final int notEvaluable;
+  final String criterion;
+  final AgreementMatrix overall;
+  final Map<String, AgreementMatrix> byCephalicGroup;
+  final Map<String, AgreementMatrix> byBreed;
 }

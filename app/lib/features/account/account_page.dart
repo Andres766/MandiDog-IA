@@ -85,6 +85,20 @@ class AccountPage extends ConsumerWidget {
               onTap: () => context.push('/consent'),
             ),
           ),
+          if (me.value?.canValidate == true) ...[
+            const SectionTitle('Veterinario'),
+            Card(
+              child: ListTile(
+                leading: const Icon(Icons.fact_check_outlined),
+                title: const Text('Validación clínica'),
+                subtitle: const Text(
+                  'Valora casos a ciegas y mira la concordancia',
+                ),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () => context.push('/validation'),
+              ),
+            ),
+          ],
           const SectionTitle('Sesión'),
           Card(
             child: ListTile(

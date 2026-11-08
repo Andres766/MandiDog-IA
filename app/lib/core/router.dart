@@ -14,6 +14,9 @@ import '../features/pets/pet_detail_page.dart';
 import '../features/pets/pet_form_page.dart';
 import '../features/pets/pets_page.dart';
 import '../features/result/result_page.dart';
+import '../features/validation/validation_case_page.dart';
+import '../features/validation/validation_list_page.dart';
+import '../features/validation/validation_summary_page.dart';
 import 'api/models.dart';
 import 'auth/auth_service.dart';
 import 'providers.dart';
@@ -63,6 +66,22 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/consent',
         builder: (_, state) =>
             ConsentPage(next: state.uri.queryParameters['next']),
+      ),
+      GoRoute(
+        path: '/validation',
+        builder: (_, _) => const ValidationListPage(),
+        routes: [
+          GoRoute(
+            path: 'summary',
+            builder: (_, _) => const ValidationSummaryPage(),
+          ),
+          GoRoute(
+            path: ':analysisId',
+            builder: (_, state) => ValidationCasePage(
+              analysisId: state.pathParameters['analysisId']!,
+            ),
+          ),
+        ],
       ),
       GoRoute(path: '/pets/new', builder: (_, _) => const PetFormPage()),
       GoRoute(
