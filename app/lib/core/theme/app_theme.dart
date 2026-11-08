@@ -1,27 +1,39 @@
 import 'package:flutter/material.dart';
 
-/// Sistema visual de MandiDog IA (generado con la skill ui-ux-pro-max y ajustado):
-/// minimalista, teal clínico y tipografías redondeadas y cercanas.
+/// Sistema visual de MandiDog IA: "placa de collar" (docs/diseno.md).
 ///
-/// - El teal de los botones es el tono 40 de Material (contraste ≥ 4.5:1 con blanco).
-/// - Verde, amarillo y rojo se reservan EXCLUSIVAMENTE para el nivel de riesgo; ningún
-///   botón ni acento usa esos colores para que no se confundan con una alerta.
+/// - Fondo de aluminio cepillado frío y tinta grafito.
+/// - El teal profundo es el color de acción: solo aparece en lo que se puede tocar.
+/// - Cada perro tiene un tono anodizado propio ([TagHue]).
+/// - Verde, ámbar y rojo se reservan EXCLUSIVAMENTE para el nivel de riesgo.
 class AppTheme {
   const AppTheme._();
 
-  static const seed = Color(0xFF0D9488);
-  static const _lightBackground = Color(0xFFF0FDFA);
+  static const seed = Color(0xFF0F6E73);
 
   static const headingFont = 'VarelaRound';
   static const bodyFont = 'NunitoSans';
 
   static ThemeData light() => _build(
-    ColorScheme.fromSeed(seedColor: seed, surface: _lightBackground),
+    ColorScheme.fromSeed(
+      seedColor: seed,
+      surface: const Color(0xFFEEF2F3),
+      onSurface: const Color(0xFF1C2329),
+      surfaceContainerLowest: Colors.white,
+      outlineVariant: const Color(0xFFD3DADD),
+    ),
     RiskColors.light,
   );
 
   static ThemeData dark() => _build(
-    ColorScheme.fromSeed(seedColor: seed, brightness: Brightness.dark),
+    ColorScheme.fromSeed(
+      seedColor: seed,
+      brightness: Brightness.dark,
+      surface: const Color(0xFF111619),
+      onSurface: const Color(0xFFE3E8EA),
+      surfaceContainerLowest: const Color(0xFF181F23),
+      outlineVariant: const Color(0xFF2E383E),
+    ),
     RiskColors.dark,
   );
 
@@ -184,4 +196,27 @@ class RiskColors extends ThemeExtension<RiskColors> {
   @override
   RiskColors lerp(ThemeExtension<RiskColors>? other, double t) =>
       other is RiskColors && t >= 0.5 ? other : this;
+}
+
+/// Tonos anodizados de las placas: uno por perro, estable según su id.
+/// Ninguno es verde, ámbar ni rojo (esos colores significan riesgo). Todos admiten
+/// texto blanco con contraste ≥ 4.5:1.
+class TagHue {
+  const TagHue._();
+
+  static const values = [
+    Color(0xFF0F6E73), // teal
+    Color(0xFF2D4FA6), // cobalto
+    Color(0xFF5B45A8), // violeta
+    Color(0xFF0B5E7A), // petróleo
+    Color(0xFF3B4752), // grafito
+  ];
+
+  static Color forId(String id) {
+    var hash = 0;
+    for (final unit in id.codeUnits) {
+      hash = (hash * 31 + unit) & 0x7fffffff;
+    }
+    return values[hash % values.length];
+  }
 }

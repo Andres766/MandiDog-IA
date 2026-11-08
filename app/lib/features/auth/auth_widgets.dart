@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../core/theme/app_theme.dart';
+import '../../shared/widgets/pet_tag.dart';
 
 final _emailPattern = RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$');
 
@@ -28,33 +29,19 @@ class BrandHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    return Column(
-      children: [
-        const SizedBox(height: Spacing.lg),
-        ExcludeSemantics(
-          child: CircleAvatar(
-            radius: 40,
-            backgroundColor: scheme.primaryContainer,
-            child: Icon(Icons.pets, size: 40, color: scheme.onPrimaryContainer),
-          ),
+    return Padding(
+      padding: const EdgeInsets.only(top: Spacing.xl, bottom: Spacing.lg),
+      child: Semantics(
+        header: true,
+        label: 'MandiDog IA',
+        child: PetTag(
+          hue: AppTheme.seed,
+          name: 'MandiDog IA',
+          subtitle:
+              subtitle ?? 'Revisión orientativa de la salud dental de tu perro',
+          large: true,
         ),
-        const SizedBox(height: Spacing.md),
-        Semantics(
-          header: true,
-          child: Text(
-            'MandiDog IA',
-            style: Theme.of(context).textTheme.headlineMedium,
-          ),
-        ),
-        const SizedBox(height: Spacing.sm),
-        Text(
-          subtitle ?? 'Revisión orientativa de la salud dental de tu perro',
-          textAlign: TextAlign.center,
-          style: TextStyle(color: scheme.onSurfaceVariant),
-        ),
-        const SizedBox(height: Spacing.lg),
-      ],
+      ),
     );
   }
 }

@@ -53,6 +53,8 @@ dev_dependencies:
   # package. See that file for information about deactivating specific lint
   # rules and activating additional ones.
   flutter_lints: ^6.0.0
+  flutter_launcher_icons: ^0.14.4
+  flutter_native_splash: ^2.4.7
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
@@ -80,3 +82,28 @@ flutter:
       fonts:
         - asset: assets/fonts/VarelaRound-Regular.ttf
 
+
+# Ícono y pantalla de arranque (generados con tool/make_icons.py):
+#   dart run flutter_launcher_icons && dart run flutter_native_splash:create
+flutter_launcher_icons:
+  android: true
+  ios: false
+  image_path: assets/icon/icon.png
+  adaptive_icon_background: "#0F6E73"
+  adaptive_icon_foreground: assets/icon/icon_foreground.png
+  web:
+    generate: true
+    image_path: assets/icon/icon.png
+    background_color: "#EEF2F3"
+    theme_color: "#0F6E73"
+
+flutter_native_splash:
+  color: "#EEF2F3"
+  color_dark: "#111619"
+  image: assets/icon/splash.png
+  android_12:
+    color: "#EEF2F3"
+    color_dark: "#111619"
+    image: assets/icon/icon_foreground.png
+    icon_background_color: "#0F6E73"
+  web: false

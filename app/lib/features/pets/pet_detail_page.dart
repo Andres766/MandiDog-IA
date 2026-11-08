@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:intl/intl.dart';
 
 import '../../core/api/models.dart';
 import '../../core/providers.dart';
 import '../../core/theme/app_theme.dart';
 import '../../shared/widgets/page_body.dart';
-import '../../shared/widgets/risk_badge.dart';
 import '../../shared/widgets/states.dart';
 import 'pet_widgets.dart';
 
@@ -53,6 +53,9 @@ class _Detail extends ConsumerWidget {
     }
   }
 
+  void _open(BuildContext context, Analysis analysis) =>
+      context.push('/pets/${pet.id}/analyses/${analysis.id}', extra: analysis);
+
   Future<void> _delete(BuildContext context, WidgetRef ref) async {
     final confirmed = await showDialog<bool>(
       context: context,
@@ -91,7 +94,6 @@ class _Detail extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final history = ref.watch(historyProvider(pet.id));
     final scheme = Theme.of(context).colorScheme;
-    final summary = petSummary(pet);
 
     return Scaffold(
       appBar: AppBar(
@@ -130,43 +132,17 @@ class _Detail extends ConsumerWidget {
         },
         child: PageBody(
           children: [
-            Row(
-              children: [
-                PetAvatar(name: pet.name, radius: 32),
-                const SizedBox(width: Spacing.md),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        pet.name,
-                        style: Theme.of(context).textTheme.headlineSmall,
-                      ),
-                      Text(
-                        [
-                              summary,
-                              pet.sex == PetSex.unknown ? null : pet.sex.label,
-                            ]
-                            .whereType<String>()
-                            .where((s) => s.isNotEmpty)
-                            .join(' · '),
-                        style: TextStyle(color: scheme.onSurfaceVariant),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-            if (pet.lastAnalysis != null) ...[
-              const SizedBox(height: Spacing.md),
-              Row(
-                children: [
-                  Text(
-                    'Último resultado: ',
-                    style: TextStyle(color: scheme.onSurfaceVariant),
-                  ),
-                  RiskBadge(level: pet.lastAnalysis!.riskLevel),
-                ],
+            const SizedBox(height: Spacing.sm),
+            PetTagCard(pet: pet, onTap: null, large: true),
+            if (pet.sex != PetSex.unknown || pet.birthDate != null) ...[
+              const SizedBox(height: Spacing.sm),
+              Text(
+                [
+                  if (pet.sex != PetSex.unknown) pet.sex.label,
+                  if (pet.birthDate != null)
+                    'Nació el ${DateFormat("d 'de' MMMM 'de' y", 'es').format(pet.birthDate!)}',
+                ].join(' · '),
+                style: TextStyle(color: scheme.onSurfaceVariant),
               ),
             ],
             const SizedBox(height: Spacing.lg),
@@ -183,16 +159,29 @@ class _Detail extends ConsumerWidget {
                 message: 'Toca «Escanear dientes» para hacer el primero.',
               ),
               AsyncData(:final value) => Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  for (final analysis in value) ...[
-                    HistoryTile(
-                      analysis: analysis,
-                      onTap: () => context.push(
-                        '/pets/${pet.id}/analyses/${analysis.id}',
-                        extra: analysis,
+                  LatestScanCard(
+                    analysis: value.first,
+                    onTap: () => _open(context, value.first),
+                  ),
+                  if (value.length > 1) ...[
+                    const SectionTitle('Escaneos anteriores'),
+                    Card(
+                      clipBehavior: Clip.antiAlias,
+                      child: Column(
+                        children: [
+                          for (final (i, analysis)
+                              in value.skip(1).indexed) ...[
+                            if (i > 0) const Divider(height: 1),
+                            HistoryTile(
+                              analysis: analysis,
+                              onTap: () => _open(context, analysis),
+                            ),
+                          ],
+                        ],
                       ),
                     ),
-                    const SizedBox(height: Spacing.sm),
                   ],
                 ],
               ),

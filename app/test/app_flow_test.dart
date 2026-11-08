@@ -25,7 +25,7 @@ void main() {
         await tapText(tester, 'Entrar');
 
         expect(find.text('Mis perros'), findsOneWidget);
-        expect(find.text('Agrega a tu primer perro'), findsOneWidget);
+        expect(find.text('Tu primer perro'), findsOneWidget);
       },
     );
 
@@ -118,7 +118,7 @@ void main() {
       await tapWidget(tester, find.widgetWithText(TextButton, 'Eliminar'));
 
       expect(backend.pets, isEmpty);
-      expect(find.text('Agrega a tu primer perro'), findsOneWidget);
+      expect(find.text('Tu primer perro'), findsOneWidget);
     });
   });
 

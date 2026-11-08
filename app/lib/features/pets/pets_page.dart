@@ -6,6 +6,7 @@ import '../../core/api/models.dart';
 import '../../core/providers.dart';
 import '../../core/theme/app_theme.dart';
 import '../../shared/widgets/page_body.dart';
+import '../../shared/widgets/pet_tag.dart';
 import '../../shared/widgets/states.dart';
 import 'pet_widgets.dart';
 
@@ -61,17 +62,31 @@ class PetsPage extends ConsumerWidget {
     if (pets.isEmpty) {
       return PageBody(
         children: [
-          EmptyState(
-            icon: Icons.pets,
-            title: 'Agrega a tu primer perro',
-            message:
-                'Registra a tu perro para revisar la salud de sus dientes y guardar el '
-                'historial de cada escaneo.',
-            action: FilledButton.icon(
-              onPressed: () => context.push('/pets/new'),
-              icon: const Icon(Icons.add),
-              label: const Text('Agregar perro'),
+          const SizedBox(height: Spacing.lg),
+          BlankTag(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Tu primer perro',
+                  style: Theme.of(context).textTheme.headlineSmall,
+                ),
+                const SizedBox(height: Spacing.sm),
+                Text(
+                  'Cada perro tiene su placa, con su nombre y el resultado de su último '
+                  'escaneo dental.',
+                  style: TextStyle(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
+                ),
+              ],
             ),
+          ),
+          const SizedBox(height: Spacing.lg),
+          FilledButton.icon(
+            onPressed: () => context.push('/pets/new'),
+            icon: const Icon(Icons.add),
+            label: const Text('Agregar perro'),
           ),
         ],
       );
@@ -80,10 +95,10 @@ class PetsPage extends ConsumerWidget {
       children: [
         const _ConsentBanner(),
         for (final pet in pets) ...[
-          PetCard(pet: pet, onTap: () => context.push('/pets/${pet.id}')),
-          const SizedBox(height: Spacing.sm),
+          PetTagCard(pet: pet, onTap: () => context.push('/pets/${pet.id}')),
+          const SizedBox(height: 12),
         ],
-        // Espacio para que el botón flotante no tape la última tarjeta.
+        // Espacio para que el botón flotante no tape la última placa.
         const SizedBox(height: 88),
       ],
     );
