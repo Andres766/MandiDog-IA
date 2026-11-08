@@ -183,6 +183,9 @@ Detalle en [datos-y-consentimiento.md](datos-y-consentimiento.md). Resumen:
 | GET / PATCH / DELETE | `/api/v1/pets/{id}` | Ver / editar / borrar (con su historial) |
 | GET | `/api/v1/pets/{id}/analyses` | Historial, del más reciente al más antiguo (`limit`, `offset`) |
 | POST | `/api/v1/analysis` | Registrar el resultado de un escaneo (201, o 200 si es un reintento) |
+| GET | `/api/v1/validations/pending` | Veterinarios: casos sin valorar, a ciegas (sin el resultado de la IA, solo recortes de foto) |
+| POST | `/api/v1/analyses/{id}/validation` | Veterinarios: registrar la valoración; responde revelando lo que dijo la IA |
+| GET | `/api/v1/validations/summary` | Veterinarios: matriz de confusión, sensibilidad, especificidad y exactitud (total, por biotipo cefálico y por raza) |
 
 Especificación completa en `/docs` (OpenAPI).
 
@@ -196,9 +199,11 @@ Especificación completa en `/docs` (OpenAPI).
 | HTTP | `code` | Qué hacer en la app |
 |---|---|---|
 | 401 | `missing_credentials`, `invalid_token` | Volver a iniciar sesión |
+| 403 | `vet_only` | Ocultar la validación clínica (la cuenta no es de veterinario) |
 | 404 | `pet_not_found` | Refrescar la lista de mascotas |
 | 409 | `consent_required`, `consent_policy_outdated` | Mostrar el texto de autorización vigente |
 | 409 | `scan_id_conflict` | Repetir el escaneo con un `client_scan_id` nuevo |
+| 409 | `already_validated` | El veterinario ya valoró ese caso |
 | 409 | `account_has_validations` | Contactar al equipo |
 | 422 | `scan_result_invalid`, `scan_result_mismatch` | Repetir el escaneo; reportar si se repite |
 | 503 | `auth_unavailable` | Servicio caído: reintentar más tarde |
@@ -214,13 +219,16 @@ de arquitectura). IDs UUID y fechas `timestamptz`.
 | `users` | Cuenta (`firebase_uid` único, `role` owner/vet/admin) y autorización de datos |
 | `pets` | Mascotas del propietario (CASCADE al borrar el usuario) |
 | `analyses` | `client_scan_id` único, semáforo, estado del proveedor, posición (`TLEFT`/`TCENTER`/`TRIGHT`), hallazgos (JSONB), JSON original (JSONB), versión del SDK, recomendación y versión de la autorización |
-| `validations` | Validación clínica ciega por veterinarios (`sin_signos`, `con_signos`, `no_evaluable`); los endpoints llegan después |
+| `validations` | Validación clínica ciega por veterinarios (`sin_signos`, `con_signos`, `no_evaluable`), una por veterinario y caso |
 
 Índice `ix_analyses_pet_created (pet_id, created_at DESC)` para el historial.
 
-## 9. Despliegue (pendiente de configurar)
+## 9. Despliegue
 
-- **API en Railway** con el `Dockerfile` de `api/` (última etapa `prod`, usuario sin root).
+Pasos completos en [publicacion.md](publicacion.md).
+
+- **API en Railway** con el `Dockerfile` de `api/` (última etapa `prod`, usuario sin root);
+  `api/railway.json` fija el builder y el healthcheck en `/health`.
   `docker/start.sh` aplica las migraciones y arranca Uvicorn en `$PORT`. La `DATABASE_URL`
   de Railway se normaliza sola al driver `psycopg`.
 - **AI for Pet en producción:** requiere aprobación explícita de AI for Pet para la

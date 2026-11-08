@@ -12,10 +12,11 @@ Proyecto de grado de Ingeniería de Software, Universidad Cooperativa de Colombi
 
 | Parte | Carpeta | Estado |
 |---|---|---|
-| API | `api/` | ✅ Lista en local: 104 pruebas |
+| API | `api/` | ✅ Lista en local: 118 pruebas |
 | Integración AI for Pet | `app/android/` + `app/lib/features/capture/` | ✅ Probada con un escaneo real en un Galaxy S25 Ultra (Android 17); simulación en navegador |
-| App (acceso, perros, autorización, escaneo, resultado, historial, cuenta) | `app/` | ✅ Etapa 3 en modo desarrollo: 31 pruebas; Firebase listo para conectar |
-| Despliegue | Railway | Pendiente |
+| App (acceso, perros, autorización, escaneo, resultado, historial, cuenta) | `app/` | ✅ Etapa 3 en modo desarrollo: 35 pruebas; Firebase listo para conectar |
+| Validación clínica ciega (veterinarios) | `api/` + `app/lib/features/validation/` | ✅ Valoración a ciegas, revelado y concordancia (sensibilidad, especificidad, exactitud) |
+| Despliegue | Railway + APK/Play | Configuración lista ([docs/publicacion.md](docs/publicacion.md)); faltan las cuentas y claves |
 
 El 2026-11-04 se reemplazó el modelo propio por el SDK de AI for Pet. Los motivos y las
 consecuencias están en [docs/arquitectura.md](docs/arquitectura.md#0-cambio-de-arquitectura-2026-11-04).
@@ -27,7 +28,8 @@ consecuencias están en [docs/arquitectura.md](docs/arquitectura.md#0-cambio-de-
 ├── app/            Flutter, Android 9+, con el SDK nativo de AI for Pet
 ├── docs/
 │   ├── arquitectura.md               flujo, integración con el SDK, endpoints, errores, decisiones
-│   └── datos-y-consentimiento.md     Ley 1581, transferencia a AI for Pet, texto de autorización
+│   ├── datos-y-consentimiento.md     Ley 1581, transferencia a AI for Pet, texto de autorización
+│   └── publicacion.md                Railway, Firebase, llave de Android y distribución
 ├── docker-compose.yml               api + postgres
 └── .env.example
 ```
@@ -61,7 +63,7 @@ La API aplica las migraciones al arrancar. Los puertos se cambian en `.env`
 ### Correr las pruebas
 
 ```bash
-docker compose run --rm api pytest                  # 104 pruebas
+docker compose run --rm api pytest                  # 118 pruebas
 docker compose run --rm api pytest --cov=app        # con cobertura
 docker compose run --rm api sh -c "ruff check . && ruff format --check ."
 ```
@@ -211,8 +213,18 @@ usa CORS; en producción esa variable queda vacía.
 ```bash
 cd app
 flutter analyze
-flutter test                         # 31 pruebas; simulan la API y el SDK, no consumen análisis
+flutter test                         # 35 pruebas; simulan la API y el SDK, no consumen análisis
 flutter build apk --debug            # compila con el SDK real de AI for Pet
+```
+
+### Validación clínica
+
+Un veterinario valora cada escaneo mirando solo las fotos; después de registrar su
+valoración la app le muestra lo que dijo la IA. *Mi cuenta → Validación clínica* aparece
+solo para cuentas con rol `vet`. En desarrollo:
+
+```bash
+docker compose exec api python -m app.cli set-role --uid dev:prueba-local --role vet
 ```
 
 ## Documentación
@@ -221,5 +233,7 @@ flutter build apk --debug            # compila con el SDK real de AI for Pet
   interpretación del resultado, endpoints, códigos de error y decisiones.
 - [Datos y consentimiento](docs/datos-y-consentimiento.md): Ley 1581, transferencia
   internacional a AI for Pet, derechos del titular y texto de autorización.
-- [Diseño](docs/diseno.md): sistema visual (color, tipografía, semáforo), pantallas y la
-  lista de verificación de accesibilidad aplicada.
+- [Diseño](DESIGN.md): sistema visual "placa de collar" (color, tipografía, componentes,
+  semáforo) y reglas de accesibilidad.
+- [Publicación](docs/publicacion.md): API en Railway, Firebase, firma de Android y
+  distribución.
