@@ -97,7 +97,6 @@ class _Detail extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(pet.name),
         actions: [
           PopupMenuButton<String>(
             tooltip: 'Más opciones',

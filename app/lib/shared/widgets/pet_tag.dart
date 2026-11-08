@@ -75,31 +75,34 @@ class _PetTagState extends State<PetTag> with SingleTickerProviderStateMixin {
       child: Stack(
         clipBehavior: Clip.none,
         children: [
-          DecoratedBox(
-            decoration: BoxDecoration(
-              color: widget.hue,
-              borderRadius: BorderRadius.circular(large ? 32 : 26),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.18),
-                  offset: const Offset(0, 3),
-                  blurRadius: 8,
-                ),
-              ],
-            ),
-            child: Padding(
-              padding: EdgeInsets.fromLTRB(
-                ringLeft + ringSize + (large ? 20 : 16),
-                large ? 22 : 16,
-                large ? 22 : 16,
-                large ? 22 : 16,
+          SizedBox(
+            width: double.infinity,
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                color: widget.hue,
+                borderRadius: BorderRadius.circular(large ? 32 : 26),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.18),
+                    offset: const Offset(0, 3),
+                    blurRadius: 8,
+                  ),
+                ],
               ),
-              child: _Engraving(
-                name: widget.name,
-                subtitle: widget.subtitle,
-                risk: widget.risk,
-                emptyRiskText: widget.emptyRiskText,
-                large: large,
+              child: Padding(
+                padding: EdgeInsets.fromLTRB(
+                  ringLeft + ringSize + (large ? 20 : 16),
+                  large ? 22 : 16,
+                  large ? 22 : 16,
+                  large ? 22 : 16,
+                ),
+                child: _Engraving(
+                  name: widget.name,
+                  subtitle: widget.subtitle,
+                  risk: widget.risk,
+                  emptyRiskText: widget.emptyRiskText,
+                  large: large,
+                ),
               ),
             ),
           ),
@@ -208,7 +211,7 @@ class _RingPainter extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     final center = size.center(Offset.zero);
     final radius = size.width / 2;
-    // Perforación: el color del fondo, con un bisel claro.
+    // Perforación: deja ver el fondo, con un bisel claro como el metal cortado.
     canvas.drawCircle(center, radius, Paint()..color = ground);
     canvas.drawCircle(
       center,
@@ -216,21 +219,20 @@ class _RingPainter extends CustomPainter {
       Paint()
         ..style = PaintingStyle.stroke
         ..strokeWidth = 1.5
-        ..color = Colors.white.withValues(alpha: 0.35),
+        ..color = Colors.white.withValues(alpha: 0.4),
     );
-    // Aro partido de acero que pasa por la argolla.
+    // Aro partido: entra por la perforación y sale por el borde izquierdo de la placa.
+    final ringRadius = radius * 1.35;
+    final ringCenter = center.translate(-radius * 1.05, 0);
     final steel = Paint()
       ..style = PaintingStyle.stroke
-      ..strokeWidth = size.width * 0.14
+      ..strokeWidth = math.max(2.5, size.width * 0.13)
       ..strokeCap = StrokeCap.round
       ..color = const Color(0xFF9AA6AD);
     canvas.drawArc(
-      Rect.fromCircle(
-        center: center.translate(-radius * 0.55, 0),
-        radius: radius * 0.95,
-      ),
-      -math.pi * 0.42,
-      math.pi * 1.55,
+      Rect.fromCircle(center: ringCenter, radius: ringRadius),
+      -math.pi * 0.30,
+      math.pi * 1.75,
       false,
       steel,
     );
@@ -334,4 +336,54 @@ class _DashedTagPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(_DashedTagPainter old) => old.color != color;
+}
+
+/// Placa mini: identifica al perro en pantallas que no son su ficha (por ejemplo,
+/// el resultado de un escaneo).
+class TagChip extends StatelessWidget {
+  const TagChip({super.key, required this.hue, required this.name});
+
+  final Color hue;
+  final String name;
+
+  @override
+  Widget build(BuildContext context) {
+    final ground = Theme.of(context).colorScheme.surface;
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          color: hue,
+          borderRadius: BorderRadius.circular(999),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(10, 6, 14, 6),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ExcludeSemantics(
+                child: Container(
+                  width: 10,
+                  height: 10,
+                  decoration: BoxDecoration(
+                    color: ground,
+                    shape: BoxShape.circle,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Text(
+                name,
+                style: const TextStyle(
+                  fontFamily: AppTheme.headingFont,
+                  color: Colors.white,
+                  fontSize: 15,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 }

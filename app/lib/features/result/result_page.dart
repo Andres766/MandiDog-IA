@@ -8,6 +8,7 @@ import '../../core/providers.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/theme/risk_style.dart';
 import '../../shared/widgets/page_body.dart';
+import '../../shared/widgets/pet_tag.dart';
 import '../../shared/widgets/states.dart';
 import '../../shared/widgets/vet_notice.dart';
 import '../pets/pet_widgets.dart';
@@ -28,7 +29,8 @@ class ResultPage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final petName = ref.watch(petProvider(petId)).value?.name;
+    final pet = ref.watch(petProvider(petId)).value;
+    final petName = pet?.name;
     final AsyncValue<Analysis> analysis = initial != null
         ? AsyncData(initial!)
         : ref
@@ -80,13 +82,16 @@ class _Result extends StatelessWidget {
     final textTheme = Theme.of(context).textTheme;
     final style = RiskStyle.of(context, analysis.riskLevel);
     final meta = [
-      petName,
       formatDateTime(analysis.createdAt),
       analysis.positionLabel,
     ].whereType<String>().join(' · ');
 
     return PageBody(
       children: [
+        if (petName != null) ...[
+          TagChip(hue: TagHue.forId(petId), name: petName!),
+          const SizedBox(height: Spacing.md),
+        ],
         if (analysis.isSimulated) ...[
           Card(
             color: scheme.tertiaryContainer,

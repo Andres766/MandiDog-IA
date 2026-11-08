@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:intl/intl.dart';
 
 import '../../core/api/models.dart';
 import '../../core/providers.dart';
@@ -93,6 +94,7 @@ class PetsPage extends ConsumerWidget {
     }
     return PageBody(
       children: [
+        _Summary(pets: pets),
         const _ConsentBanner(),
         for (final pet in pets) ...[
           PetTagCard(pet: pet, onTap: () => context.push('/pets/${pet.id}')),
@@ -156,5 +158,44 @@ class _ConsentBanner extends ConsumerWidget {
         ),
       ),
     );
+  }
+}
+
+/// Lo primero que se lee: cuántos perros hay y cuándo fue el último escaneo.
+class _Summary extends StatelessWidget {
+  const _Summary({required this.pets});
+
+  final List<Pet> pets;
+
+  @override
+  Widget build(BuildContext context) {
+    final dates =
+        pets
+            .map((p) => p.lastAnalysis?.createdAt)
+            .whereType<DateTime>()
+            .toList()
+          ..sort();
+    final count = pets.length == 1 ? '1 perro' : '${pets.length} perros';
+    final last = dates.isEmpty
+        ? 'aún sin escaneos'
+        : 'último escaneo: ${_relative(dates.last)}';
+    return Padding(
+      padding: const EdgeInsets.only(bottom: Spacing.md),
+      child: Text(
+        '$count · $last',
+        style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
+      ),
+    );
+  }
+
+  static String _relative(DateTime when) {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final day = DateTime(when.year, when.month, when.day);
+    final hour = DateFormat('h:mm a', 'es').format(when);
+    final days = today.difference(day).inDays;
+    if (days == 0) return 'hoy, $hour';
+    if (days == 1) return 'ayer, $hour';
+    return DateFormat("d 'de' MMMM", 'es').format(when);
   }
 }
