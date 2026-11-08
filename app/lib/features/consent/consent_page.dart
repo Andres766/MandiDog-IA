@@ -191,17 +191,14 @@ class _AcceptedNote extends StatelessWidget {
     final date = acceptedAt == null
         ? ''
         : ' el ${DateFormat("d 'de' MMMM 'de' y", 'es').format(acceptedAt!)}';
+    // Informativa, no se toca: sin el teal de acción.
     return Card(
-      color: scheme.primaryContainer,
       child: ListTile(
         leading: Icon(
           Icons.verified_user_outlined,
-          color: scheme.onPrimaryContainer,
+          color: scheme.onSurfaceVariant,
         ),
-        title: Text(
-          'Aceptaste esta autorización$date.',
-          style: TextStyle(color: scheme.onPrimaryContainer),
-        ),
+        title: Text('Aceptaste esta autorización$date.'),
       ),
     );
   }

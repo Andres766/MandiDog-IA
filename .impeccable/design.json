@@ -1,0 +1,643 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-11-08T16:57:27+00:00",
+  "title": "Design System: MandiDog IA",
+  "extensions": {
+    "colorMeta": {
+      "accion-teal": {
+        "role": "primary",
+        "displayName": "Teal de acción",
+        "canonical": "#0F6E73",
+        "tonalRamp": [
+          "#001012",
+          "#002C2F",
+          "#054C4F",
+          "#1E6E72",
+          "#459094",
+          "#75B1B5",
+          "#A3D4D6",
+          "#D1F7F9"
+        ],
+        "note": "Semilla de ColorScheme.fromSeed; Material 3 deriva de ella el primario, los contenedores y la versión oscura (cian claro con texto oscuro)."
+      },
+      "aluminio-claro": {
+        "role": "neutral",
+        "displayName": "Aluminio claro",
+        "canonical": "#EEF2F3",
+        "tonalRamp": [
+          "#0A0B0C",
+          "#242526",
+          "#404243",
+          "#5F6263",
+          "#808384",
+          "#A3A6A6",
+          "#C7CACA",
+          "#EDEFEF"
+        ]
+      },
+      "aluminio-oscuro": {
+        "role": "neutral",
+        "displayName": "Aluminio oscuro",
+        "canonical": "#111619",
+        "tonalRamp": [
+          "#090C0D",
+          "#222628",
+          "#3E4345",
+          "#5C6266",
+          "#7D8387",
+          "#A1A6A9",
+          "#C5CACD",
+          "#EBEFF1"
+        ]
+      },
+      "tinta-grafito": {
+        "role": "neutral",
+        "displayName": "Tinta grafito",
+        "canonical": "#1C2329",
+        "tonalRamp": [
+          "#090C0E",
+          "#21262A",
+          "#3D4348",
+          "#5B6269",
+          "#7B838A",
+          "#9FA6AC",
+          "#C4CACF",
+          "#EAEFF3"
+        ]
+      },
+      "tinta-clara": {
+        "role": "neutral",
+        "displayName": "Tinta clara",
+        "canonical": "#E3E8EA",
+        "tonalRamp": [
+          "#0A0B0C",
+          "#232526",
+          "#3F4344",
+          "#5E6263",
+          "#7F8385",
+          "#A2A6A7",
+          "#C7CACB",
+          "#ECEFF0"
+        ]
+      },
+      "lamina-clara": {
+        "role": "neutral",
+        "displayName": "Lámina clara",
+        "canonical": "#FFFFFF",
+        "tonalRamp": [
+          "#0B0B0B",
+          "#252525",
+          "#424242",
+          "#616161",
+          "#828282",
+          "#A5A5A5",
+          "#C9C9C9",
+          "#EEEEEE"
+        ]
+      },
+      "lamina-oscura": {
+        "role": "neutral",
+        "displayName": "Lámina oscura",
+        "canonical": "#181F23",
+        "tonalRamp": [
+          "#090C0D",
+          "#212628",
+          "#3D4347",
+          "#5B6367",
+          "#7C8488",
+          "#9FA6AA",
+          "#C4CACE",
+          "#EBEFF2"
+        ]
+      },
+      "borde-claro": {
+        "role": "neutral",
+        "displayName": "Borde claro",
+        "canonical": "#D3DADD",
+        "tonalRamp": [
+          "#090C0C",
+          "#222627",
+          "#3E4345",
+          "#5D6265",
+          "#7D8386",
+          "#A1A6A8",
+          "#C5CACC",
+          "#ECEFF1"
+        ]
+      },
+      "borde-oscuro": {
+        "role": "neutral",
+        "displayName": "Borde oscuro",
+        "canonical": "#2E383E",
+        "tonalRamp": [
+          "#080C0E",
+          "#20262A",
+          "#3B4348",
+          "#596369",
+          "#7A848B",
+          "#9DA7AC",
+          "#C3CACF",
+          "#E9EFF3"
+        ]
+      },
+      "placa-cobalto": {
+        "role": "tag-hue",
+        "displayName": "Placa cobalto",
+        "canonical": "#2D4FA6",
+        "tonalRamp": [
+          "#010629",
+          "#0E2051",
+          "#233D7E",
+          "#3B5CAD",
+          "#5A7FD3",
+          "#82A3ED",
+          "#ACC9FF",
+          "#D7EFFF"
+        ]
+      },
+      "placa-violeta": {
+        "role": "tag-hue",
+        "displayName": "Placa violeta",
+        "canonical": "#5B45A8",
+        "tonalRamp": [
+          "#0D0228",
+          "#261850",
+          "#42337C",
+          "#614FAB",
+          "#8271D0",
+          "#A398EB",
+          "#C7BFFF",
+          "#ECE7FF"
+        ]
+      },
+      "placa-ciruela": {
+        "role": "tag-hue",
+        "displayName": "Placa ciruela",
+        "canonical": "#7A3B69",
+        "tonalRamp": [
+          "#180212",
+          "#391630",
+          "#5E2F51",
+          "#854974",
+          "#A96A96",
+          "#C891B7",
+          "#E8B9D8",
+          "#FFE2FB"
+        ]
+      },
+      "placa-bronce": {
+        "role": "tag-hue",
+        "displayName": "Placa bronce",
+        "canonical": "#7A4A2B",
+        "tonalRamp": [
+          "#170600",
+          "#381D0C",
+          "#5C3821",
+          "#825539",
+          "#A67659",
+          "#C59B81",
+          "#E5C1AB",
+          "#FFE8D7"
+        ]
+      },
+      "placa-grafito": {
+        "role": "tag-hue",
+        "displayName": "Placa grafito (también placa de la marca)",
+        "canonical": "#3B4752",
+        "tonalRamp": [
+          "#070C10",
+          "#1F262C",
+          "#3A434C",
+          "#57636E",
+          "#78848F",
+          "#9CA7B1",
+          "#C1CAD3",
+          "#E8EFF6"
+        ]
+      },
+      "acero-aro": {
+        "role": "neutral",
+        "displayName": "Acero del aro",
+        "canonical": "#BAC4CA",
+        "tonalRamp": [
+          "#080C0E",
+          "#212629",
+          "#3D4347",
+          "#5A6368",
+          "#7B8489",
+          "#9FA6AB",
+          "#C4CACE",
+          "#EAEFF2"
+        ]
+      },
+      "acero-aro-sombra": {
+        "role": "neutral",
+        "displayName": "Sombra del aro",
+        "canonical": "#66737B",
+        "tonalRamp": [
+          "#070C0F",
+          "#1F262A",
+          "#3A4449",
+          "#57636A",
+          "#78848C",
+          "#9CA7AE",
+          "#C2CBD0",
+          "#E8F0F4"
+        ]
+      },
+      "riesgo-verde-tinta": {
+        "role": "risk",
+        "displayName": "Riesgo verde, tinta (tema claro)",
+        "canonical": "#166534",
+        "tonalRamp": [
+          "#001102",
+          "#012E13",
+          "#174E2A",
+          "#2E7143",
+          "#519363",
+          "#7DB58A",
+          "#A9D7B3",
+          "#D6F9DD"
+        ]
+      },
+      "riesgo-verde-fondo": {
+        "role": "risk",
+        "displayName": "Riesgo verde, fondo (tema claro)",
+        "canonical": "#DCFCE7",
+        "tonalRamp": [
+          "#040E08",
+          "#1A2920",
+          "#33483B",
+          "#4F6858",
+          "#6F8A79",
+          "#94AC9D",
+          "#BBCFC2",
+          "#E4F3E9"
+        ]
+      },
+      "riesgo-ambar-tinta": {
+        "role": "risk",
+        "displayName": "Riesgo ambar, tinta (tema claro)",
+        "canonical": "#854D0E",
+        "tonalRamp": [
+          "#190500",
+          "#3B1C00",
+          "#603709",
+          "#87531F",
+          "#AB7542",
+          "#CA9A70",
+          "#E9C09E",
+          "#FFE8CD"
+        ]
+      },
+      "riesgo-ambar-fondo": {
+        "role": "risk",
+        "displayName": "Riesgo ambar, fondo (tema claro)",
+        "canonical": "#FEF9C3",
+        "tonalRamp": [
+          "#0E0C00",
+          "#29260A",
+          "#47431F",
+          "#686336",
+          "#898457",
+          "#ABA780",
+          "#CECBAA",
+          "#F2F0D6"
+        ]
+      },
+      "riesgo-rojo-tinta": {
+        "role": "risk",
+        "displayName": "Riesgo rojo, tinta (tema claro)",
+        "canonical": "#991B1B",
+        "tonalRamp": [
+          "#230000",
+          "#4B0305",
+          "#771C19",
+          "#A5342F",
+          "#CC584F",
+          "#E9847A",
+          "#FFAFA5",
+          "#FFDBD2"
+        ]
+      },
+      "riesgo-rojo-fondo": {
+        "role": "risk",
+        "displayName": "Riesgo rojo, fondo (tema claro)",
+        "canonical": "#FEE2E2",
+        "tonalRamp": [
+          "#110909",
+          "#2E2121",
+          "#4E3D3D",
+          "#715B5B",
+          "#937C7C",
+          "#B49F9F",
+          "#D6C4C4",
+          "#F9EBEB"
+        ]
+      },
+      "riesgo-verde-tinta-oscuro": {
+        "role": "risk",
+        "displayName": "Riesgo verde, tinta (tema oscuro)",
+        "canonical": "#BBF7D0",
+        "tonalRamp": [
+          "#001005",
+          "#0C2C1A",
+          "#224C34",
+          "#3B6E4F",
+          "#5C9070",
+          "#85B195",
+          "#AFD4BB",
+          "#DAF7E4"
+        ]
+      },
+      "riesgo-verde-fondo-oscuro": {
+        "role": "risk",
+        "displayName": "Riesgo verde, fondo (tema oscuro)",
+        "canonical": "#14532D",
+        "tonalRamp": [
+          "#001003",
+          "#0A2D17",
+          "#214D2F",
+          "#396F4A",
+          "#5A916A",
+          "#84B290",
+          "#AED4B8",
+          "#D9F8E1"
+        ]
+      },
+      "riesgo-ambar-tinta-oscuro": {
+        "role": "risk",
+        "displayName": "Riesgo ambar, tinta (tema oscuro)",
+        "canonical": "#FEF08A",
+        "tonalRamp": [
+          "#110B00",
+          "#2D2500",
+          "#4D4200",
+          "#6F6200",
+          "#918421",
+          "#B2A75C",
+          "#D3CB8F",
+          "#F7F1C2"
+        ]
+      },
+      "riesgo-ambar-fondo-oscuro": {
+        "role": "risk",
+        "displayName": "Riesgo ambar, fondo (tema oscuro)",
+        "canonical": "#713F12",
+        "tonalRamp": [
+          "#180600",
+          "#391D04",
+          "#5E3818",
+          "#84542E",
+          "#A8764F",
+          "#C79A7A",
+          "#E7C1A5",
+          "#FFE8D2"
+        ]
+      },
+      "riesgo-rojo-tinta-oscuro": {
+        "role": "risk",
+        "displayName": "Riesgo rojo, tinta (tema oscuro)",
+        "canonical": "#FECACA",
+        "tonalRamp": [
+          "#160607",
+          "#351D1E",
+          "#583838",
+          "#7E5555",
+          "#A17576",
+          "#C19A9A",
+          "#E1C0C0",
+          "#FFE7E7"
+        ]
+      },
+      "riesgo-rojo-fondo-oscuro": {
+        "role": "risk",
+        "displayName": "Riesgo rojo, fondo (tema oscuro)",
+        "canonical": "#7F1D1D",
+        "tonalRamp": [
+          "#200000",
+          "#460E0D",
+          "#6F2623",
+          "#9B403B",
+          "#C1625B",
+          "#DF8B83",
+          "#FCB4AD",
+          "#FFDED8"
+        ]
+      }
+    },
+    "typographyMeta": {
+      "placa-nombre-grande": {
+        "displayName": "Nombre en placa grande",
+        "purpose": "Nombre grabado en la placa de la ficha del perro."
+      },
+      "placa-nombre": {
+        "displayName": "Nombre en placa",
+        "purpose": "Nombre grabado en las placas de \"Mis perros\"."
+      },
+      "headline": {
+        "displayName": "Headline",
+        "purpose": "Título de pantalla dentro del contenido."
+      },
+      "title": {
+        "displayName": "Title",
+        "purpose": "Barra superior y títulos de estado vacío."
+      },
+      "sello-grande": {
+        "displayName": "Sello grande",
+        "purpose": "Palabra de riesgo en el resultado y en el último escaneo."
+      },
+      "seccion": {
+        "displayName": "Sección",
+        "purpose": "Títulos de sección."
+      },
+      "body-large": {
+        "displayName": "Body grande",
+        "purpose": "Recomendaciones y hallazgos."
+      },
+      "body": {
+        "displayName": "Body",
+        "purpose": "Texto corrido por defecto."
+      },
+      "boton": {
+        "displayName": "Botón",
+        "purpose": "Etiquetas de botones llenos y flotante (700); contorno y texto usan 600."
+      },
+      "sello": {
+        "displayName": "Sello",
+        "purpose": "Palabra de riesgo en placas (14) e historial (13)."
+      },
+      "meta": {
+        "displayName": "Meta",
+        "purpose": "Fechas y lado del escaneo, en onSurfaceVariant."
+      }
+    },
+    "shadows": [
+      {
+        "name": "placa-colgada",
+        "value": "0 3px 8px rgba(0,0,0,0.18)",
+        "purpose": "Única sombra del sistema: la placa de collar sobre el aluminio."
+      }
+    ],
+    "motion": [
+      {
+        "name": "vaiven-placa",
+        "value": "900ms; ángulo = 0.045·e^(−4.5t)·sin(5πt) rad; pivote en el punto izquierdo del aro",
+        "purpose": "La placa se mece desde su argolla al tocarla. Se desactiva con animaciones reducidas."
+      },
+      {
+        "name": "apertura-placa",
+        "value": "200ms",
+        "purpose": "Retraso antes de abrir la ficha para ver el primer vaivén; con animaciones reducidas la ficha abre de inmediato."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "ancho-maximo-contenido",
+        "value": "640px"
+      }
+    ],
+    "platform": {
+      "name": "android",
+      "framework": "Flutter, Material 3",
+      "units": "Los px de este archivo son dp (tamaños) y sp (texto) lógicos de Flutter."
+    }
+  },
+  "components": [
+    {
+      "name": "Botón principal",
+      "kind": "button",
+      "refersTo": "boton-principal",
+      "description": "Acción principal de la pantalla: lleno en teal, 48 dp de alto, ancho completo.",
+      "html": "<button class=\"ds-btn-primary\">Escanear dientes</button>",
+      "css": ".ds-btn-primary{font-family:'Nunito Sans',sans-serif;font-weight:700;font-size:16px;min-height:48px;padding:0 24px;border:none;border-radius:16px;background:#0F6E73;color:#fff;cursor:pointer;transition:background .2s}.ds-btn-primary:hover{background:#0C5D61}.ds-btn-primary:focus-visible{outline:3px solid #0F6E73;outline-offset:3px}.ds-btn-primary:active{background:#0A4F52}"
+    },
+    {
+      "name": "Botón de contorno",
+      "kind": "button",
+      "refersTo": "boton-contorno",
+      "description": "Acción secundaria, con ícono opcional (\"Escanear otro lado\", \"Reintentar\"). El color del contorno aproxima el rol outline derivado.",
+      "html": "<button class=\"ds-btn-outline\">Escanear otro lado</button>",
+      "css": ".ds-btn-outline{font-family:'Nunito Sans',sans-serif;font-weight:600;font-size:16px;min-height:48px;padding:0 24px;border:1px solid #6F797A;border-radius:16px;background:transparent;color:#0F6E73;cursor:pointer;transition:background .2s}.ds-btn-outline:hover{background:rgba(15,110,115,.08)}.ds-btn-outline:focus-visible{outline:3px solid #0F6E73;outline-offset:3px}"
+    },
+    {
+      "name": "Botón flotante \"Agregar perro\"",
+      "kind": "button",
+      "refersTo": "boton-flotante",
+      "description": "Acción principal de \"Mis perros\", abajo a la derecha.",
+      "html": "<button class=\"ds-fab\">+ Agregar perro</button>",
+      "css": ".ds-fab{font-family:'Nunito Sans',sans-serif;font-weight:700;font-size:16px;height:56px;padding:0 20px;border:none;border-radius:16px;background:#0F6E73;color:#fff;box-shadow:0 3px 6px rgba(0,0,0,.2);cursor:pointer}.ds-fab:hover{background:#0C5D61}.ds-fab:focus-visible{outline:3px solid #0F6E73;outline-offset:3px}"
+    },
+    {
+      "name": "Campo de texto",
+      "kind": "input",
+      "refersTo": "campo",
+      "description": "Campo relleno con la lámina y contorno de Material con radio de 16 dp.",
+      "html": "<label class=\"ds-field\"><span>Nombre</span><input value=\"Toby\"></label>",
+      "css": ".ds-field{display:flex;flex-direction:column;gap:4px;font-family:'Nunito Sans',sans-serif;font-size:13px;color:#3F484A}.ds-field input{font-family:'Nunito Sans',sans-serif;font-size:16px;min-height:48px;padding:0 14px;border:1px solid #6F797A;border-radius:16px;background:#FFFFFF;color:#1C2329}.ds-field input:focus-visible{outline:none;border:2px solid #0F6E73}"
+    },
+    {
+      "name": "Tarjeta",
+      "kind": "card",
+      "refersTo": "tarjeta",
+      "description": "Contenedor plano con borde de 1 dp; sin sombra.",
+      "html": "<div class=\"ds-card\"><strong>Lo que encontró el análisis</strong><p>Inflamación de encías</p></div>",
+      "css": ".ds-card{font-family:'Nunito Sans',sans-serif;background:#FFFFFF;border:1px solid #D3DADD;border-radius:16px;padding:16px;color:#1C2329}.ds-card p{margin:8px 0 0;line-height:1.5}"
+    },
+    {
+      "name": "Placa de collar",
+      "kind": "custom",
+      "refersTo": "placa",
+      "description": "La placa de cada perro: tono anodizado, perforación con aro de acero, nombre grabado y sello del último escaneo. Se mece desde la argolla al tocarla.",
+      "html": "<div class=\"ds-tagwrap\"><button class=\"ds-tag\"><svg class=\"ds-ring\" width=\"46\" height=\"46\" viewBox=\"0 0 46 46\" aria-hidden=\"true\"><circle cx=\"23\" cy=\"23\" r=\"17\" fill=\"none\" stroke=\"#BAC4CA\" stroke-width=\"2\"/><circle cx=\"23\" cy=\"23\" r=\"14.2\" fill=\"none\" stroke=\"#66737B\" stroke-width=\"2\"/></svg><span class=\"ds-hole\"></span><span class=\"ds-tag-name\">Toby</span><span class=\"ds-tag-sub\">Pug · 3 años</span><span class=\"ds-stamp ds-stamp-red\"><svg width=\"18\" height=\"18\" viewBox=\"0 0 24 24\" aria-hidden=\"true\"><path fill=\"currentColor\" d=\"M12 3a1.6 1.6 0 0 1 1.6 1.6v9a1.6 1.6 0 1 1-3.2 0v-9A1.6 1.6 0 0 1 12 3zm0 14.2a1.9 1.9 0 1 1 0 3.8 1.9 1.9 0 0 1 0-3.8z\"/></svg>Consulta pronto</span></button></div>",
+      "css": ".ds-tagwrap{background:#EEF2F3;padding:16px 16px 16px 24px}.ds-tag{position:relative;display:flex;flex-direction:column;align-items:flex-start;gap:4px;width:100%;text-align:left;border:none;cursor:pointer;background:#3B4752;color:#fff;border-radius:26px;padding:16px 16px 16px 48px;box-shadow:0 3px 8px rgba(0,0,0,.18);transform-origin:-10px 50%}.ds-tag .ds-ring{position:absolute;left:-16px;top:calc(50% - 23px)}.ds-hole{position:absolute;left:16px;top:calc(50% - 8px);width:16px;height:16px;border-radius:50%;background:#EEF2F3;box-shadow:inset 0 0 0 1px rgba(0,0,0,.22)}.ds-tag-name{font-family:'Varela Round',sans-serif;font-size:26px;line-height:1.1;letter-spacing:.2px}.ds-tag-sub{font-family:'Nunito Sans',sans-serif;font-size:15px;color:rgba(255,255,255,.86)}.ds-tag .ds-stamp{margin-top:8px}.ds-tag:focus-visible{outline:3px solid #0F6E73;outline-offset:3px}.ds-tag:active{animation:ds-swing .9s}@keyframes ds-swing{0%{transform:rotate(0)}15%{transform:rotate(2deg)}35%{transform:rotate(-1.2deg)}55%{transform:rotate(.6deg)}75%{transform:rotate(-.25deg)}100%{transform:rotate(0)}}@media (prefers-reduced-motion:reduce){.ds-tag:active{animation:none}}.ds-stamp{display:inline-flex;align-items:center;gap:6px;font-family:'Nunito Sans',sans-serif;font-weight:700;font-size:14px;padding:5px 10px;border-radius:10px;border:1.5px solid}.ds-stamp-red{background:#FEE2E2;color:#991B1B;border-color:rgba(153,27,27,.55)}"
+    },
+    {
+      "name": "Sello de riesgo",
+      "kind": "chip",
+      "refersTo": "sello-riesgo-verde",
+      "description": "Ícono + palabra + color, nunca solo color; tamaños normal y grande. Verde, ámbar y rojo existen solo aquí y en los hallazgos del resultado.",
+      "html": "<div class=\"ds-stamps\"><span class=\"ds-stamp ds-g\"><svg width=\"18\" height=\"18\" viewBox=\"0 0 24 24\" aria-hidden=\"true\"><path fill=\"currentColor\" d=\"M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm0 18a8 8 0 1 1 0-16 8 8 0 0 1 0 16zm-1.3-5.6-2.9-2.9-1.4 1.4 4.3 4.3 7.3-7.3-1.4-1.4z\"/></svg>Sin signos de riesgo</span><span class=\"ds-stamp ds-y\"><svg width=\"18\" height=\"18\" viewBox=\"0 0 24 24\" aria-hidden=\"true\"><path fill=\"currentColor\" d=\"M12 6c3.8 0 7.2 2.1 8.8 6-1.6 3.9-5 6-8.8 6s-7.2-2.1-8.8-6C4.8 8.1 8.2 6 12 6zm0 2c-2.8 0-5.3 1.4-6.6 4 1.3 2.6 3.8 4 6.6 4s5.3-1.4 6.6-4c-1.3-2.6-3.8-4-6.6-4zm0 1.5a2.5 2.5 0 1 1 0 5 2.5 2.5 0 0 1 0-5z\"/></svg>Conviene vigilar</span><span class=\"ds-stamp ds-r\"><svg width=\"18\" height=\"18\" viewBox=\"0 0 24 24\" aria-hidden=\"true\"><path fill=\"currentColor\" d=\"M12 3a1.6 1.6 0 0 1 1.6 1.6v9a1.6 1.6 0 1 1-3.2 0v-9A1.6 1.6 0 0 1 12 3zm0 14.2a1.9 1.9 0 1 1 0 3.8 1.9 1.9 0 0 1 0-3.8z\"/></svg>Consulta pronto</span><span class=\"ds-stamp ds-r ds-lg\"><svg width=\"18\" height=\"18\" viewBox=\"0 0 24 24\" aria-hidden=\"true\"><path fill=\"currentColor\" d=\"M12 3a1.6 1.6 0 0 1 1.6 1.6v9a1.6 1.6 0 1 1-3.2 0v-9A1.6 1.6 0 0 1 12 3zm0 14.2a1.9 1.9 0 1 1 0 3.8 1.9 1.9 0 0 1 0-3.8z\"/></svg>Consulta pronto</span></div>",
+      "css": ".ds-stamps{display:flex;flex-wrap:wrap;gap:8px;align-items:center}.ds-stamp{display:inline-flex;align-items:center;gap:6px;font-family:'Nunito Sans',sans-serif;font-weight:700;font-size:14px;padding:5px 10px;border-radius:10px;border:1.5px solid}.ds-g{background:#DCFCE7;color:#166534;border-color:rgba(22,101,52,.55)}.ds-y{background:#FEF9C3;color:#854D0E;border-color:rgba(133,77,14,.55)}.ds-r{background:#FEE2E2;color:#991B1B;border-color:rgba(153,27,27,.55)}.ds-lg{font-family:'Varela Round',sans-serif;font-weight:400;font-size:22px;padding:9px 14px;border-radius:14px;border-width:2px;gap:10px}.ds-lg svg{width:26px;height:26px}"
+    },
+    {
+      "name": "Placa mini",
+      "kind": "chip",
+      "refersTo": "placa-mini",
+      "description": "Pastilla en el tono del perro que lo identifica en escaneo y resultado.",
+      "html": "<span class=\"ds-tagchip\"><span class=\"ds-minihole\"></span>Toby</span>",
+      "css": ".ds-tagchip{position:relative;display:inline-block;font-family:'Varela Round',sans-serif;font-size:15px;color:#fff;background:#3B4752;border-radius:999px;padding:6px 14px 6px 23px}.ds-minihole{position:absolute;left:7px;top:calc(50% - 4px);width:8px;height:8px;border-radius:50%;background:#EEF2F3;box-shadow:0 0 0 1.4px #BAC4CA}"
+    },
+    {
+      "name": "Aviso del veterinario",
+      "kind": "custom",
+      "description": "Franja fija al pie de todo resultado; no se cierra ni se oculta. Los colores aproximan el rol secondaryContainer derivado de la semilla en tema claro.",
+      "html": "<div class=\"ds-vet\"><svg width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" aria-hidden=\"true\"><path fill=\"currentColor\" d=\"M20 6h-4V4a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2zM10 4h4v2h-4V4zm10 16H4V8h16v12zm-7-10h-2v3H8v2h3v3h2v-3h3v-2h-3z\"/></svg><span>Este resultado es orientativo y no es un diagnóstico: consulta siempre a tu veterinario.</span></div>",
+      "css": ".ds-vet{display:flex;align-items:center;gap:12px;padding:12px 16px;background:#CCE8E9;color:#051F21;font-family:'Nunito Sans',sans-serif;font-size:14px;line-height:1.5}"
+    }
+  ],
+  "narrative": {
+    "northStar": "La placa de collar",
+    "overview": "Cada perro es su placa de identificación: una chapa de aluminio anodizado en un tono propio, con el nombre grabado en blanco y una argolla con aro partido que la cuelga del borde izquierdo. Todo lo demás es el aluminio cepillado y frío sobre el que cuelgan las placas, escrito en tinta grafito. El dueño reconoce a cada perro por color y nombre antes de leer nada, y el último sello de riesgo va estampado en la propia placa.\n\nEl sistema es Material 3 en Flutter, nativo de Android, con densidad tranquila para una mano: columnas a ancho completo, márgenes de 16 dp, objetivos de 48 dp y pocos tamaños de letra, con la jerarquía hecha por peso y por la familia redondeada de los titulares. El color está estrictamente repartido por significado: el teal profundo solo en lo que se toca, verde, ámbar y rojo solo para el riesgo, y los tonos de las placas solo para identificar perros. El escaneo más reciente se muestra grande; los anteriores ceden en filas compactas.\n\nLa app rechaza la lista gris de tarjetas idénticas de \"app de salud\" con un único acento teal. El único gesto expresivo es físico: la placa se mece desde su argolla al tocarla, y desaparece cuando el sistema pide reducir animaciones.",
+    "keyCharacteristics": [
+      "Placas anodizadas a ancho completo con argolla y aro de acero dibujados, nombre grabado en Varela Round blanca.",
+      "Fondo de aluminio frío (claro y oscuro), tinta grafito, láminas blancas o casi negras con borde fino.",
+      "Color con un solo significado por familia: acción, riesgo o identidad del perro.",
+      "Riesgo siempre como sello: ícono + palabra + color.",
+      "Aviso del veterinario fijo al pie de todo resultado."
+    ],
+    "rules": [
+      {
+        "name": "The Semáforo Exclusivo Rule",
+        "body": "Verde, ámbar y rojo significan nivel de riesgo y nada más: ni éxito de formulario, ni placas, ni decoración. Los errores de formulario usan el rol `errorContainer` de Material, no la tinta roja de riesgo.",
+        "section": "colors"
+      },
+      {
+        "name": "The Nunca Solo Color Rule",
+        "body": "El riesgo se muestra siempre con ícono + palabra + color juntos (verde: círculo con visto, \"Sin signos de riesgo\"; amarillo: ojo, \"Conviene vigilar\"; rojo: signo de exclamación, \"Consulta pronto\"), y el lector de pantalla lee \"Nivel [color]: [palabra]\".",
+        "section": "colors"
+      },
+      {
+        "name": "The Teal Se Toca Rule",
+        "body": "El teal de acción aparece solo en elementos accionables. Si algo es teal y no responde al toque, está mal.",
+        "section": "colors"
+      },
+      {
+        "name": "The Placa Sin Semáforo Rule",
+        "body": "Ningún tono de placa puede ser verde, ámbar, rojo ni parecido al teal de acción, y todos deben llevar texto blanco con contraste de al menos 4.5:1.",
+        "section": "colors"
+      },
+      {
+        "name": "The Grabado Redondo Rule",
+        "body": "Varela Round es para nombres de perro, titulares y la palabra del sello grande; nunca para párrafos ni etiquetas pequeñas. Como tiene un solo peso, la jerarquía se hace por tamaño y no por negrita.",
+        "section": "typography"
+      },
+      {
+        "name": "The Pulgar Rule",
+        "body": "Todo objetivo táctil mide al menos 48 dp; los botones tienen 48 dp de alto mínimo y ancho completo cuando son la acción principal de la pantalla.",
+        "section": "layout"
+      },
+      {
+        "name": "The Solo Cuelga La Placa Rule",
+        "body": "Las tarjetas, avisos y campos no llevan sombra; la profundidad es exclusiva de la placa.",
+        "section": "elevation"
+      }
+    ],
+    "dos": [
+      "Do mostrar el riesgo siempre con ícono + palabra + color usando `RiskStamp` o `RiskStyle`.",
+      "Do reservar el teal de acción a botones, botón flotante, casillas y demás elementos que respondan al toque.",
+      "Do identificar a cada perro con su tono de placa (`TagHue.forId`) y su nombre en Varela Round blanca, con la placa completa en lista y ficha y la placa mini en las demás pantallas.",
+      "Do fijar `VetNotice` al pie de cada pantalla de resultado.",
+      "Do mantener objetivos táctiles de 48 dp y el ritmo de 4/8 dp.",
+      "Do respetar las animaciones reducidas: sin vaivén de la placa y apertura inmediata de la ficha al tocarla."
+    ],
+    "donts": [
+      "Don't usar verde, ámbar o rojo para algo que no sea nivel de riesgo, ni comunicar el riesgo solo con color.",
+      "Don't agregar tonos de placa verdes, ámbar, rojos o parecidos al teal, ni tonos que no lleguen a 4.5:1 con texto blanco.",
+      "Don't pintar de teal (ni de sus contenedores primarios) superficies que no se tocan.",
+      "Don't permitir cerrar, ocultar o desplazar el aviso del veterinario.",
+      "Don't poner sombra a tarjetas o avisos; la única sombra es la de la placa.",
+      "Don't mostrar porcentajes de confianza ni la foto analizada."
+    ]
+  }
+}
