@@ -114,59 +114,34 @@ class _Result extends StatelessWidget {
           label:
               'Resultado: nivel ${style.short}, ${style.label}. ${style.description}',
           excludeSemantics: true,
-          child: Card(
-            color: style.background,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(Spacing.radius),
-              side: BorderSide(color: style.foreground.withValues(alpha: 0.4)),
-            ),
-            child: Padding(
-              padding: const EdgeInsets.all(Spacing.lg),
-              child: Column(
-                children: [
-                  CircleAvatar(
-                    radius: 36,
-                    backgroundColor: style.foreground,
-                    child: Icon(style.icon, size: 40, color: style.background),
-                  ),
-                  const SizedBox(height: Spacing.md),
-                  Text(
-                    style.label,
-                    textAlign: TextAlign.center,
-                    style: textTheme.headlineSmall?.copyWith(
-                      color: style.foreground,
-                    ),
-                  ),
-                  Text(
-                    'Nivel ${style.short.toLowerCase()}',
-                    style: TextStyle(
-                      color: style.foreground,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                  const SizedBox(height: Spacing.sm),
-                  Text(
-                    style.description,
-                    textAlign: TextAlign.center,
-                    style: TextStyle(color: style.foreground),
-                  ),
-                ],
-              ),
-            ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              RiskStamp(level: analysis.riskLevel, large: true),
+              const SizedBox(height: Spacing.md),
+              Text(style.description, style: textTheme.titleMedium),
+            ],
           ),
         ),
         const SizedBox(height: Spacing.sm),
         Text(
-          meta,
-          textAlign: TextAlign.center,
+          ['Nivel ${style.short.toLowerCase()}', meta].join(' · '),
           style: TextStyle(color: scheme.onSurfaceVariant),
         ),
         const SectionTitle('Lo que encontró el análisis'),
         if (analysis.findings.isEmpty)
           const Text('El análisis no reportó hallazgos específicos.')
         else
-          for (final finding in analysis.findings)
-            _FindingRow(finding: finding),
+          Card(
+            child: Column(
+              children: [
+                for (final (i, finding) in analysis.findings.indexed) ...[
+                  if (i > 0) const Divider(height: 1),
+                  _FindingRow(finding: finding, level: analysis.riskLevel),
+                ],
+              ],
+            ),
+          ),
         const SectionTitle('Qué hacer ahora'),
         // El aviso del veterinario ya está fijo abajo: no se repite aquí.
         Text(
@@ -197,29 +172,36 @@ class _Result extends StatelessWidget {
 }
 
 class _FindingRow extends StatelessWidget {
-  const _FindingRow({required this.finding});
+  const _FindingRow({required this.finding, required this.level});
 
   final Finding finding;
+
+  /// Nivel del escaneo: un signo hallado toma su color (ámbar o rojo).
+  final RiskLevel level;
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final (icon, color) = switch (finding.status) {
-      FindingStatus.abnormal => (Icons.warning_amber_rounded, scheme.error),
-      FindingStatus.normal => (Icons.check_circle_outline, scheme.primary),
+      FindingStatus.abnormal => (
+        Icons.warning_amber_rounded,
+        RiskStyle.of(
+          context,
+          level == RiskLevel.green ? RiskLevel.yellow : level,
+        ).foreground,
+      ),
+      FindingStatus.normal => (
+        Icons.check_circle_outline,
+        RiskStyle.of(context, RiskLevel.green).foreground,
+      ),
       FindingStatus.unknown => (Icons.help_outline, scheme.onSurfaceVariant),
     };
-    return Padding(
-      padding: const EdgeInsets.only(bottom: Spacing.sm),
-      child: Card(
-        child: ListTile(
-          leading: ExcludeSemantics(child: Icon(icon, color: color)),
-          title: Text(finding.name),
-          trailing: Text(
-            finding.status.label,
-            style: TextStyle(fontWeight: FontWeight.w700, color: color),
-          ),
-        ),
+    return ListTile(
+      leading: ExcludeSemantics(child: Icon(icon, color: color)),
+      title: Text(finding.name),
+      trailing: Text(
+        finding.status.label,
+        style: TextStyle(fontWeight: FontWeight.w700, color: color),
       ),
     );
   }

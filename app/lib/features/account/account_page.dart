@@ -55,13 +55,7 @@ class AccountPage extends ConsumerWidget {
         children: [
           ListTile(
             contentPadding: EdgeInsets.zero,
-            leading: CircleAvatar(
-              backgroundColor: scheme.primaryContainer,
-              child: Icon(
-                Icons.person_outline,
-                color: scheme.onPrimaryContainer,
-              ),
-            ),
+            leading: Icon(Icons.person_outline, color: scheme.onSurfaceVariant),
             title: Text(
               user?.displayName ?? me.value?.displayName ?? 'Tu cuenta',
             ),
@@ -110,11 +104,8 @@ class AccountPage extends ConsumerWidget {
           const SizedBox(height: Spacing.sm),
           Card(
             child: ListTile(
-              leading: Icon(Icons.delete_forever_outlined, color: scheme.error),
-              title: Text(
-                'Eliminar mi cuenta',
-                style: TextStyle(color: scheme.error),
-              ),
+              leading: const Icon(Icons.delete_forever_outlined),
+              title: const Text('Eliminar mi cuenta'),
               subtitle: const Text('Borra tus perros y su historial'),
               onTap: () => _deleteAccount(context, ref),
             ),

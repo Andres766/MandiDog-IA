@@ -48,9 +48,24 @@ class _PetTagState extends State<PetTag> with SingleTickerProviderStateMixin {
     super.dispose();
   }
 
+  bool _opening = false;
+
   void _startSwing() {
     if (MediaQuery.disableAnimationsOf(context)) return;
     _swing.forward(from: 0);
+  }
+
+  /// Deja ver el primer vaivén antes de abrir la ficha; sin animaciones abre ya.
+  void _handleTap() {
+    final onTap = widget.onTap;
+    if (onTap == null) return _startSwing();
+    if (MediaQuery.disableAnimationsOf(context)) return onTap();
+    if (_opening) return;
+    _opening = true;
+    Future<void>.delayed(const Duration(milliseconds: 200), () {
+      _opening = false;
+      if (mounted) onTap();
+    });
   }
 
   /// Oscilación amortiguada: unos grados que se apagan como una placa real.
@@ -60,59 +75,50 @@ class _PetTagState extends State<PetTag> with SingleTickerProviderStateMixin {
   @override
   Widget build(BuildContext context) {
     final large = widget.large;
-    final ringSize = large ? 26.0 : 20.0;
-    final ringLeft = large ? 18.0 : 14.0;
+    final ring = large ? _Ring.large : _Ring.regular;
 
     final tag = AnimatedBuilder(
       animation: _swing,
       builder: (context, child) => Transform.rotate(
         angle: _angle(_swing.value),
-        // Pivote en el centro de la argolla.
+        // Pivote donde el aro cuelga del collar: su punto más a la izquierda.
         alignment: Alignment.centerLeft,
-        origin: Offset(ringLeft + ringSize / 2, 0),
+        origin: Offset(ring.centerX - ring.radius, 0),
         child: child,
       ),
-      child: Stack(
-        clipBehavior: Clip.none,
-        children: [
-          SizedBox(
-            width: double.infinity,
-            child: DecoratedBox(
-              decoration: BoxDecoration(
-                color: widget.hue,
-                borderRadius: BorderRadius.circular(large ? 32 : 26),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.18),
-                    offset: const Offset(0, 3),
-                    blurRadius: 8,
-                  ),
-                ],
+      child: _Ringed(
+        ring: ring,
+        body: SizedBox(
+          width: double.infinity,
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              color: widget.hue,
+              borderRadius: BorderRadius.circular(large ? 32 : 26),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.18),
+                  offset: const Offset(0, 3),
+                  blurRadius: 8,
+                ),
+              ],
+            ),
+            child: Padding(
+              padding: EdgeInsets.fromLTRB(
+                ring.holeX + ring.holeRadius + (large ? 20 : 16),
+                large ? 22 : 16,
+                large ? 22 : 16,
+                large ? 22 : 16,
               ),
-              child: Padding(
-                padding: EdgeInsets.fromLTRB(
-                  ringLeft + ringSize + (large ? 20 : 16),
-                  large ? 22 : 16,
-                  large ? 22 : 16,
-                  large ? 22 : 16,
-                ),
-                child: _Engraving(
-                  name: widget.name,
-                  subtitle: widget.subtitle,
-                  risk: widget.risk,
-                  emptyRiskText: widget.emptyRiskText,
-                  large: large,
-                ),
+              child: _Engraving(
+                name: widget.name,
+                subtitle: widget.subtitle,
+                risk: widget.risk,
+                emptyRiskText: widget.emptyRiskText,
+                large: large,
               ),
             ),
           ),
-          Positioned(
-            left: ringLeft,
-            top: 0,
-            bottom: 0,
-            child: Center(child: _RingHole(size: ringSize)),
-          ),
-        ],
+        ),
       ),
     );
 
@@ -123,7 +129,7 @@ class _PetTagState extends State<PetTag> with SingleTickerProviderStateMixin {
       child: GestureDetector(
         behavior: HitTestBehavior.opaque,
         onTapDown: (_) => _startSwing(),
-        onTap: widget.onTap ?? _startSwing,
+        onTap: _handleTap,
         child: tag,
       ),
     );
@@ -184,70 +190,160 @@ class _Engraving extends StatelessWidget {
   }
 }
 
-/// Argolla perforada: el agujero deja ver el fondo y un aro partido de acero lo cruza.
-class _RingHole extends StatelessWidget {
-  const _RingHole({required this.size});
+/// Medidas de la perforación y del aro partido, desde el borde izquierdo de la placa.
+class _Ring {
+  const _Ring({
+    required this.holeX,
+    required this.holeRadius,
+    required this.radius,
+    required this.wire,
+  });
 
-  final double size;
+  static const large = _Ring(holeX: 28, holeRadius: 10, radius: 21, wire: 2.2);
+  static const regular = _Ring(holeX: 24, holeRadius: 8, radius: 17, wire: 2);
+  static const mini = _Ring(holeX: 11, holeRadius: 4, radius: 8, wire: 1.4);
+
+  /// Centro de la perforación.
+  final double holeX;
+  final double holeRadius;
+
+  /// Radio del aro. El alambre descansa contra el borde izquierdo de la perforación,
+  /// como en una placa que cuelga, y el aro sobresale de la placa por la izquierda.
+  final double radius;
+  final double wire;
+
+  /// Distancia del centro del aro al centro de la perforación.
+  double get reach => radius + holeRadius * 0.45;
+
+  double get centerX => holeX - reach;
+
+  /// Lado del lienzo cuadrado que contiene el aro completo.
+  double get box => (radius + wire * 3) * 2;
+}
+
+/// Placa con su argolla: el aro se dibuja detrás de la placa, y encima solo se ve
+/// la perforación (con el aro cruzándola) y el tramo de aro que pasa por delante.
+class _Ringed extends StatelessWidget {
+  const _Ringed({required this.ring, required this.body});
+
+  final _Ring ring;
+  final Widget body;
 
   @override
   Widget build(BuildContext context) {
     final ground = Theme.of(context).colorScheme.surface;
-    return ExcludeSemantics(
-      child: SizedBox.square(
-        dimension: size,
-        child: CustomPaint(painter: _RingPainter(ground: ground)),
+    Widget layer(bool front) => Positioned(
+      left: ring.centerX - ring.box / 2,
+      top: 0,
+      bottom: 0,
+      child: Center(
+        child: ExcludeSemantics(
+          child: SizedBox.square(
+            dimension: ring.box,
+            child: CustomPaint(
+              painter: _RingPainter(ring: ring, ground: ground, front: front),
+            ),
+          ),
+        ),
       ),
+    );
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [layer(false), body, layer(true)],
     );
   }
 }
 
 class _RingPainter extends CustomPainter {
-  _RingPainter({required this.ground});
+  _RingPainter({required this.ring, required this.ground, required this.front});
 
+  final _Ring ring;
   final Color ground;
+  final bool front;
+
+  // Dos tonos: el claro se lee sobre las placas oscuras y el oscuro sobre el fondo.
+  static const _steel = Color(0xFFBAC4CA);
+  static const _steelShade = Color(0xFF66737B);
+
+  /// Aro partido: dos vueltas de alambre, una junto a la otra.
+  void _coil(Canvas canvas, Offset center, {double start = 0, double? sweep}) {
+    for (final (offset, color) in [
+      (0.0, _steel),
+      (ring.wire * 1.4, _steelShade),
+    ]) {
+      final paint = Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = ring.wire
+        ..strokeCap = StrokeCap.round
+        ..color = color;
+      final rect = Rect.fromCircle(
+        center: center,
+        radius: ring.radius - offset,
+      );
+      if (sweep == null) {
+        canvas.drawOval(rect, paint);
+      } else {
+        canvas.drawArc(rect, start, sweep, false, paint);
+      }
+    }
+  }
 
   @override
   void paint(Canvas canvas, Size size) {
     final center = size.center(Offset.zero);
-    final radius = size.width / 2;
-    // Perforación: deja ver el fondo, con un bisel claro como el metal cortado.
-    canvas.drawCircle(center, radius, Paint()..color = ground);
+    if (!front) {
+      // Detrás de la placa: solo asoma el tramo que cuelga fuera.
+      _coil(canvas, center);
+      return;
+    }
+    final hole = center.translate(ring.reach, 0);
+    final edgeX = center.dx - ring.centerX;
+
+    // Perforación: deja ver el fondo, con el borde cortado un poco más oscuro.
+    canvas.drawCircle(hole, ring.holeRadius, Paint()..color = ground);
     canvas.drawCircle(
-      center,
-      radius - 0.75,
+      hole,
+      ring.holeRadius,
       Paint()
         ..style = PaintingStyle.stroke
-        ..strokeWidth = 1.5
-        ..color = Colors.white.withValues(alpha: 0.4),
+        ..strokeWidth = 1
+        ..color = Colors.black.withValues(alpha: 0.22),
     );
-    // Aro partido: entra por la perforación y sale por el borde izquierdo de la placa.
-    final ringRadius = radius * 1.35;
-    final ringCenter = center.translate(-radius * 1.05, 0);
-    final steel = Paint()
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = math.max(2.5, size.width * 0.13)
-      ..strokeCap = StrokeCap.round
-      ..color = const Color(0xFF9AA6AD);
-    canvas.drawArc(
-      Rect.fromCircle(center: ringCenter, radius: ringRadius),
-      -math.pi * 0.30,
-      math.pi * 1.75,
-      false,
-      steel,
+    canvas.save();
+    canvas.clipPath(
+      Path()..addOval(Rect.fromCircle(center: hole, radius: ring.holeRadius)),
     );
+    _coil(canvas, center);
+    canvas.restore();
+
+    // Tramo delantero: sale de la perforación hacia abajo y cruza el borde.
+    final edgeAngle = math.acos(
+      ((edgeX - center.dx) / ring.radius).clamp(-1.0, 1.0),
+    );
+    canvas.save();
+    canvas.clipRect(Rect.fromLTRB(edgeX, 0, size.width, size.height));
+    _coil(canvas, center, sweep: edgeAngle);
+    canvas.restore();
   }
 
   @override
-  bool shouldRepaint(_RingPainter old) => old.ground != ground;
+  bool shouldRepaint(_RingPainter old) =>
+      old.ground != ground || old.ring != ring || old.front != front;
 }
 
 /// Sello del nivel de riesgo sobre la placa o en listas: ícono + palabra + color.
+/// [large] es el mismo sello a tamaño de titular (último escaneo y resultado).
 class RiskStamp extends StatelessWidget {
-  const RiskStamp({super.key, required this.level, this.dense = false});
+  const RiskStamp({
+    super.key,
+    required this.level,
+    this.dense = false,
+    this.large = false,
+  }) : assert(!(dense && large));
 
   final RiskLevel level;
   final bool dense;
+  final bool large;
 
   @override
   Widget build(BuildContext context) {
@@ -258,28 +354,41 @@ class RiskStamp extends StatelessWidget {
       child: DecoratedBox(
         decoration: BoxDecoration(
           color: style.background,
-          borderRadius: BorderRadius.circular(10),
+          borderRadius: BorderRadius.circular(large ? 14 : 10),
           border: Border.all(
             color: style.foreground.withValues(alpha: 0.55),
-            width: 1.5,
+            width: large ? 2 : 1.5,
           ),
         ),
         child: Padding(
           padding: EdgeInsets.symmetric(
-            horizontal: 10,
-            vertical: dense ? 3 : 5,
+            horizontal: large ? 14 : 10,
+            vertical: large ? 9 : (dense ? 3 : 5),
           ),
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(style.icon, size: dense ? 16 : 18, color: style.foreground),
-              const SizedBox(width: 6),
-              Text(
-                style.label,
-                style: TextStyle(
-                  color: style.foreground,
-                  fontWeight: FontWeight.w700,
-                  fontSize: dense ? 13 : 14,
+              Icon(
+                style.icon,
+                size: large ? 26 : (dense ? 16 : 18),
+                color: style.foreground,
+              ),
+              SizedBox(width: large ? 10 : 6),
+              Flexible(
+                child: Text(
+                  style.label,
+                  style: large
+                      ? TextStyle(
+                          fontFamily: AppTheme.headingFont,
+                          color: style.foreground,
+                          fontSize: 22,
+                          height: 1.2,
+                        )
+                      : TextStyle(
+                          color: style.foreground,
+                          fontWeight: FontWeight.w700,
+                          fontSize: dense ? 13 : 14,
+                        ),
                 ),
               ),
             ],
@@ -330,8 +439,8 @@ class _DashedTagPainter extends CustomPainter {
         canvas.drawPath(metric.extractPath(d, d + 8), paint);
       }
     }
-    final hole = Offset(24, size.height / 2);
-    canvas.drawCircle(hole, 10, paint);
+    final hole = Offset(_Ring.regular.holeX, size.height / 2);
+    canvas.drawCircle(hole, _Ring.regular.holeRadius, paint);
   }
 
   @override
@@ -348,39 +457,31 @@ class TagChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final ground = Theme.of(context).colorScheme.surface;
+    const ring = _Ring.mini;
     return Align(
       alignment: Alignment.centerLeft,
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          color: hue,
-          borderRadius: BorderRadius.circular(999),
-        ),
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(10, 6, 14, 6),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              ExcludeSemantics(
-                child: Container(
-                  width: 10,
-                  height: 10,
-                  decoration: BoxDecoration(
-                    color: ground,
-                    shape: BoxShape.circle,
-                  ),
-                ),
+      child: _Ringed(
+        ring: ring,
+        body: DecoratedBox(
+          decoration: BoxDecoration(
+            color: hue,
+            borderRadius: BorderRadius.circular(999),
+          ),
+          child: Padding(
+            padding: EdgeInsets.fromLTRB(
+              ring.holeX + ring.holeRadius + 8,
+              6,
+              14,
+              6,
+            ),
+            child: Text(
+              name,
+              style: const TextStyle(
+                fontFamily: AppTheme.headingFont,
+                color: Colors.white,
+                fontSize: 15,
               ),
-              const SizedBox(width: 8),
-              Text(
-                name,
-                style: const TextStyle(
-                  fontFamily: AppTheme.headingFont,
-                  color: Colors.white,
-                  fontSize: 15,
-                ),
-              ),
-            ],
+            ),
           ),
         ),
       ),

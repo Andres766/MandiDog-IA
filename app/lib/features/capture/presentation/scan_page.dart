@@ -7,6 +7,7 @@ import '../../../core/ids.dart';
 import '../../../core/providers.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../shared/widgets/page_body.dart';
+import '../../../shared/widgets/pet_tag.dart';
 import '../../../shared/widgets/states.dart';
 import '../../auth/auth_widgets.dart';
 import '../data/sample_result.dart';
@@ -133,11 +134,16 @@ class _ScanPageState extends ConsumerState<ScanPage> {
     final busy = _phase != _Phase.idle;
     final retrySave =
         _pending != null && _phase == _Phase.idle && _error != null;
+    final petName = ref.watch(petProvider(widget.petId)).value?.name;
 
     return Scaffold(
       appBar: AppBar(title: const Text('Escanear dientes')),
       body: PageBody(
         children: [
+          if (petName != null) ...[
+            TagChip(hue: TagHue.forId(widget.petId), name: petName),
+            const SizedBox(height: Spacing.md),
+          ],
           Text(
             'Antes de empezar',
             style: Theme.of(context).textTheme.headlineSmall,
@@ -250,11 +256,10 @@ class _Tip extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          ExcludeSemantics(
-            child: CircleAvatar(
-              radius: 20,
-              backgroundColor: scheme.primaryContainer,
-              child: Icon(icon, size: 22, color: scheme.onPrimaryContainer),
+          Padding(
+            padding: const EdgeInsets.only(top: 2),
+            child: ExcludeSemantics(
+              child: Icon(icon, size: 24, color: scheme.onSurfaceVariant),
             ),
           ),
           const SizedBox(width: Spacing.md),

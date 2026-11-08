@@ -35,7 +35,7 @@ class BrandHeader extends StatelessWidget {
         header: true,
         label: 'MandiDog IA',
         child: PetTag(
-          hue: AppTheme.seed,
+          hue: TagHue.brand,
           name: 'MandiDog IA',
           subtitle:
               subtitle ?? 'Revisión orientativa de la salud dental de tu perro',

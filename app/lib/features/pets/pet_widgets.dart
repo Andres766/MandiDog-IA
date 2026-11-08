@@ -75,11 +75,13 @@ class LatestScanCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final style = RiskStyle.of(context, analysis.riskLevel);
+    final scheme = Theme.of(context).colorScheme;
     final abnormal = analysis.abnormalFindings.map((f) => f.name.toLowerCase());
-    return Material(
-      color: style.background,
-      borderRadius: BorderRadius.circular(Spacing.radius),
+    final detail = [
+      'Último escaneo, ${formatDateTime(analysis.createdAt)}',
+      ?analysis.positionLabel,
+    ].join(' · ');
+    return Card(
       clipBehavior: Clip.antiAlias,
       child: InkWell(
         onTap: onTap,
@@ -87,49 +89,42 @@ class LatestScanCard extends StatelessWidget {
           padding: const EdgeInsets.all(Spacing.md),
           child: Row(
             children: [
-              ExcludeSemantics(
-                child: CircleAvatar(
-                  radius: 24,
-                  backgroundColor: style.foreground,
-                  child: Icon(style.icon, color: style.background, size: 28),
-                ),
-              ),
-              const SizedBox(width: Spacing.md),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      'Último escaneo · ${formatDateTime(analysis.createdAt)}',
-                      style: TextStyle(color: style.foreground, fontSize: 13),
-                    ),
-                    Text(
-                      style.label,
-                      style: TextStyle(
-                        fontFamily: AppTheme.headingFont,
-                        fontSize: 22,
-                        color: style.foreground,
-                      ),
-                    ),
+                    RiskStamp(level: analysis.riskLevel, large: true),
+                    const SizedBox(height: Spacing.sm + 4),
                     Text(
                       abnormal.isEmpty
                           ? 'Sin signos detectados'
                           : 'Signos: ${abnormal.join(', ')}',
-                      style: TextStyle(color: style.foreground),
+                      style: Theme.of(context).textTheme.bodyLarge,
+                    ),
+                    const SizedBox(height: Spacing.xs),
+                    Text(
+                      detail,
+                      style: TextStyle(
+                        color: scheme.onSurfaceVariant,
+                        fontSize: 13,
+                      ),
                     ),
                     if (analysis.isSimulated)
                       Text(
                         'Resultado simulado',
                         style: TextStyle(
-                          color: style.foreground,
-                          fontWeight: FontWeight.w700,
+                          color: scheme.tertiary,
+                          fontWeight: FontWeight.w600,
                         ),
                       ),
                   ],
                 ),
               ),
               ExcludeSemantics(
-                child: Icon(Icons.chevron_right, color: style.foreground),
+                child: Icon(
+                  Icons.chevron_right,
+                  color: scheme.onSurfaceVariant,
+                ),
               ),
             ],
           ),

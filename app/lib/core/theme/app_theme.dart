@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-/// Sistema visual de MandiDog IA: "placa de collar" (docs/diseno.md).
+/// Sistema visual de MandiDog IA: "placa de collar" (DESIGN.md).
 ///
 /// - Fondo de aluminio cepillado frío y tinta grafito.
 /// - El teal profundo es el color de acción: solo aparece en lo que se puede tocar.
@@ -199,18 +199,22 @@ class RiskColors extends ThemeExtension<RiskColors> {
 }
 
 /// Tonos anodizados de las placas: uno por perro, estable según su id.
-/// Ninguno es verde, ámbar ni rojo (esos colores significan riesgo). Todos admiten
-/// texto blanco con contraste ≥ 4.5:1.
+/// Ninguno es verde, ámbar ni rojo (esos colores significan riesgo) ni se parece al
+/// teal de acción, que queda solo para lo que se puede tocar. Todos admiten texto
+/// blanco con contraste ≥ 4.5:1.
 class TagHue {
   const TagHue._();
 
   static const values = [
-    Color(0xFF0F6E73), // teal
     Color(0xFF2D4FA6), // cobalto
     Color(0xFF5B45A8), // violeta
-    Color(0xFF0B5E7A), // petróleo
+    Color(0xFF7A3B69), // ciruela
+    Color(0xFF7A4A2B), // bronce
     Color(0xFF3B4752), // grafito
   ];
+
+  /// Placa de la marca (pantallas de acceso): grafito, neutra.
+  static const brand = Color(0xFF3B4752);
 
   static Color forId(String id) {
     var hash = 0;
