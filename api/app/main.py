@@ -15,7 +15,7 @@ from app.core.config import Settings, get_settings
 from app.core.db import create_db_engine, create_session_factory
 from app.core.errors import install_error_handlers
 from app.core.logging import configure_logging
-from app.routers import analysis, health, me, pets
+from app.routers import analysis, health, me, pets, validations
 
 logger = logging.getLogger("app")
 
@@ -74,4 +74,5 @@ def create_app(
     app.include_router(me.router)
     app.include_router(pets.router)
     app.include_router(analysis.router)
+    app.include_router(validations.router)
     return app
