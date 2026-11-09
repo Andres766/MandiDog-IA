@@ -48,6 +48,12 @@ class AppConfig {
     'FIREBASE_MESSAGING_SENDER_ID',
   );
 
+  /// ID de cliente web de OAuth (tipo 3 en google-services.json). Con él, "Continuar
+  /// con Google" usa el selector de cuentas nativo de Android en vez del navegador.
+  static const googleWebClientId = String.fromEnvironment(
+    'GOOGLE_WEB_CLIENT_ID',
+  );
+
   /// Opciones de Firebase desde --dart-define (sin google-services.json en el repo).
   /// Null si falta alguna.
   static FirebaseOptions? get firebaseOptions {

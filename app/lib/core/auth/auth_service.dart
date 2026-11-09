@@ -1,6 +1,8 @@
 import 'dart:async';
 
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/foundation.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 
 class AppUser {
   const AppUser({required this.uid, this.email, this.displayName});
@@ -120,9 +122,16 @@ class DevAuthService implements AuthService {
 }
 
 class FirebaseAuthService implements AuthService {
-  FirebaseAuthService(this._auth);
+  FirebaseAuthService(this._auth, {String googleServerClientId = ''})
+    : _googleServerClientId = googleServerClientId;
 
   final FirebaseAuth _auth;
+  final String _googleServerClientId;
+  Future<void>? _googleReady;
+
+  /// Selector de cuentas nativo de Android (Credential Manager). Sin el ID de
+  /// cliente web, o en el navegador, se usa el flujo web de Firebase.
+  bool get _nativeGoogle => !kIsWeb && _googleServerClientId.isNotEmpty;
 
   static AppUser? _map(User? u) => u == null
       ? null
@@ -164,20 +173,62 @@ class FirebaseAuthService implements AuthService {
       _guard(() => _auth.sendPasswordResetEmail(email: email.trim()));
 
   @override
-  Future<void> signInWithGoogle() => _guard(() async {
+  Future<void> signInWithGoogle() async {
+    if (!_nativeGoogle) return _signInWithGoogleWeb();
+    final google = GoogleSignIn.instance;
+    final GoogleSignInAccount account;
+    try {
+      await (_googleReady ??= google.initialize(
+        serverClientId: _googleServerClientId,
+      ));
+      account = await google.authenticate();
+    } on GoogleSignInException catch (e) {
+      // Cerrar el selector no es un error que haya que mostrar.
+      if (e.code == GoogleSignInExceptionCode.canceled) return;
+      throw AuthException(switch (e.code) {
+        GoogleSignInExceptionCode.clientConfigurationError ||
+        GoogleSignInExceptionCode.providerConfigurationError =>
+          'El acceso con Google no está bien configurado en este teléfono.',
+        GoogleSignInExceptionCode.uiUnavailable =>
+          'No se pudo abrir el selector de cuentas de Google.',
+        _ => 'No pudimos entrar con Google. Inténtalo de nuevo.',
+      });
+    }
+    final idToken = account.authentication.idToken;
+    if (idToken == null) {
+      throw const AuthException(
+        'Google no confirmó tu cuenta. Inténtalo de nuevo.',
+      );
+    }
+    await _guard(
+      () => _auth.signInWithCredential(
+        GoogleAuthProvider.credential(idToken: idToken),
+      ),
+    );
+  }
+
+  /// Flujo de respaldo: Firebase abre Google en el navegador.
+  Future<void> _signInWithGoogleWeb() => _guard(() async {
     try {
       await _auth.signInWithProvider(
         GoogleAuthProvider()..setCustomParameters({'prompt': 'select_account'}),
       );
     } on FirebaseAuthException catch (e) {
-      // Cerrar el selector no es un error que haya que mostrar.
       if (e.code == 'web-context-canceled' || e.code == 'canceled') return;
       rethrow;
     }
   });
 
   @override
-  Future<void> signOut() => _auth.signOut();
+  Future<void> signOut() async {
+    await _auth.signOut();
+    // Para que la próxima vez se pueda elegir otra cuenta de Google.
+    if (_nativeGoogle && _googleReady != null) {
+      try {
+        await GoogleSignIn.instance.signOut();
+      } catch (_) {}
+    }
+  }
 
   @override
   Future<String?> idToken() async => _auth.currentUser?.getIdToken();

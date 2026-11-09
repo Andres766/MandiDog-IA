@@ -24,7 +24,10 @@ Future<void> main() async {
       return;
     }
     await Firebase.initializeApp(options: options);
-    auth = FirebaseAuthService(FirebaseAuth.instance);
+    auth = FirebaseAuthService(
+      FirebaseAuth.instance,
+      googleServerClientId: AppConfig.googleWebClientId,
+    );
   } else {
     auth = DevAuthService();
   }

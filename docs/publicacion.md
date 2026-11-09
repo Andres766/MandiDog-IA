@@ -41,6 +41,10 @@ hace solo: requiere cuentas y claves que no van en git.
    subida (paso 3) y, si usas Google Play, los de *App Signing* de Play Console. Para
    probar desde tu PC agrega también el SHA-1 de la llave de depuración. Sin el SHA-1
    correcto, el acceso con Google falla.
+   "Continuar con Google" usa el selector de cuentas nativo de Android: pon en
+   `GOOGLE_WEB_CLIENT_ID` el ID de cliente **web** (tipo 3 en `google-services.json`, o
+   *Authentication → Google → Configuración del SDK web*). Sin él, la app usa el flujo
+   del navegador, que en Chrome reciente puede mostrar "missing initial state".
 3. Copia a `app/dart_defines.local.json` (está en `.gitignore`): `FIREBASE_API_KEY`,
    `FIREBASE_APP_ID`, `FIREBASE_PROJECT_ID` y `FIREBASE_MESSAGING_SENDER_ID`, y cambia
    `AUTH_MODE` a `firebase`.
