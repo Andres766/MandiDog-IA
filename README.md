@@ -14,7 +14,7 @@ Proyecto de grado de Ingeniería de Software, Universidad Cooperativa de Colombi
 |---|---|---|
 | API | `api/` | ✅ Lista en local: 118 pruebas |
 | Integración AI for Pet | `app/android/` + `app/lib/features/capture/` | ✅ Probada con un escaneo real en un Galaxy S25 Ultra (Android 17); simulación en navegador |
-| App (acceso, perros, autorización, escaneo, resultado, historial, cuenta) | `app/` | ✅ Etapa 3 en modo desarrollo: 35 pruebas; Firebase listo para conectar |
+| App (acceso, perros, autorización, escaneo, resultado, historial, cuenta) | `app/` | ✅ Etapa 3 en modo desarrollo: 36 pruebas; Firebase listo para conectar |
 | Validación clínica ciega (veterinarios) | `api/` + `app/lib/features/validation/` | ✅ Valoración a ciegas, revelado y concordancia (sensibilidad, especificidad, exactitud) |
 | Despliegue | Railway + APK/Play | Configuración lista ([docs/publicacion.md](docs/publicacion.md)); faltan las cuentas y claves |
 
@@ -213,7 +213,7 @@ usa CORS; en producción esa variable queda vacía.
 ```bash
 cd app
 flutter analyze
-flutter test                         # 35 pruebas; simulan la API y el SDK, no consumen análisis
+flutter test                         # 36 pruebas; simulan la API y el SDK, no consumen análisis
 flutter build apk --debug            # compila con el SDK real de AI for Pet
 ```
 
@@ -233,7 +233,7 @@ docker compose exec api python -m app.cli set-role --uid dev:prueba-local --role
   interpretación del resultado, endpoints, códigos de error y decisiones.
 - [Datos y consentimiento](docs/datos-y-consentimiento.md): Ley 1581, transferencia
   internacional a AI for Pet, derechos del titular y texto de autorización.
-- [Diseño](DESIGN.md): sistema visual "placa de collar" (color, tipografía, componentes,
-  semáforo) y reglas de accesibilidad.
+- [Diseño](DESIGN.md): sistema visual (color, tipografía, logo, componentes, pantallas,
+  movimiento) y las reglas del semáforo y de accesibilidad.
 - [Publicación](docs/publicacion.md): API en Railway, Firebase, firma de Android y
   distribución.
