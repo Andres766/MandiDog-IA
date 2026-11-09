@@ -290,6 +290,16 @@ class FakeBackend {
   }, status);
 }
 
+/// Espera a que la pantalla quede quieta. Las animaciones de entrada arrancan con
+/// un temporizador de duración cero: si se crea en el último cuadro, pumpAndSettle
+/// no lo dispara y la prueba terminaría con un temporizador pendiente (según la
+/// velocidad de la máquina). Por eso se avanza un instante y se espera de nuevo.
+Future<void> settle(WidgetTester tester) async {
+  await tester.pumpAndSettle();
+  await tester.pump(const Duration(milliseconds: 1));
+  await tester.pumpAndSettle();
+}
+
 /// Monta la app completa con el backend falso.
 Future<void> pumpApp(
   WidgetTester tester,
@@ -315,10 +325,10 @@ Future<void> pumpApp(
       child: const MandiDogApp(),
     ),
   );
-  await tester.pumpAndSettle();
+  await settle(tester);
   // Deja pasar la pantalla de arranque (dura 1,4 s).
   await tester.pump(const Duration(milliseconds: 1600));
-  await tester.pumpAndSettle();
+  await settle(tester);
 }
 
 /// Desplaza la pantalla hasta que [finder] exista y sea visible. Los ListView solo
@@ -332,13 +342,13 @@ Future<void> bringIntoView(WidgetTester tester, Finder finder) async {
     );
   }
   await tester.ensureVisible(finder.first);
-  await tester.pumpAndSettle();
+  await settle(tester);
 }
 
 Future<void> tapWidget(WidgetTester tester, Finder finder) async {
   await bringIntoView(tester, finder);
   await tester.tap(finder.first);
-  await tester.pumpAndSettle();
+  await settle(tester);
 }
 
 /// Abre la ficha de un perro desde el inicio. Su nombre aparece en la fila de
