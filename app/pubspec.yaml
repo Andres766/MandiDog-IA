@@ -98,7 +98,8 @@ flutter:
           weight: 700
 
 
-# Ícono y pantalla de arranque. Fuentes vectoriales en tool/brand/ (node render.mjs):
+# Ícono y pantalla de arranque. Fuentes vectoriales en tool/brand/
+# (node tool/brand/render.mjs icon|foreground|splash):
 #   dart run flutter_launcher_icons && dart run flutter_native_splash:create
 flutter_launcher_icons:
   android: true

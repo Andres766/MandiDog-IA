@@ -1,27 +1,24 @@
 // Renderiza los SVG de la marca a PNG con Chrome (sin dependencias). Uso, desde app/:
-//   node tool/brand/render.mjs tool/brand/icon_full.svg assets/icon/icon.png 1024
-//   node tool/brand/render.mjs tool/brand/icon_fg.svg assets/icon/icon_foreground.png 1024
-//   node tool/brand/render.mjs tool/brand/splash.svg assets/icon/splash.png 960
+//   node tool/brand/render.mjs icon        -> assets/icon/icon.png (1024)
+//   node tool/brand/render.mjs foreground  -> assets/icon/icon_foreground.png (1024)
+//   node tool/brand/render.mjs splash      -> assets/icon/splash.png (960)
 import { spawn } from 'node:child_process';
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join, relative, resolve, isAbsolute } from 'node:path';
+import { join } from 'node:path';
 
-// Solo se leen y escriben archivos dentro de la carpeta app/ (donde se ejecuta).
-function insideProject(path, extension) {
-  const full = resolve(path);
-  const rel = relative(process.cwd(), full);
-  if (rel.startsWith('..') || isAbsolute(rel) || !full.endsWith(extension)) {
-    throw new Error(`Ruta no permitida: ${path}`);
-  }
-  return full;
+// Solo estas tres salidas: el script no acepta rutas arbitrarias.
+const TARGETS = {
+  icon: { svg: 'tool/brand/icon_full.svg', png: 'assets/icon/icon.png', size: 1024 },
+  foreground: { svg: 'tool/brand/icon_fg.svg', png: 'assets/icon/icon_foreground.png', size: 1024 },
+  splash: { svg: 'tool/brand/splash.svg', png: 'assets/icon/splash.png', size: 960 },
+};
+const target = TARGETS[process.argv[2]];
+if (!target) {
+  console.error(`Uso: node tool/brand/render.mjs <${Object.keys(TARGETS).join('|')}>`);
+  process.exit(1);
 }
-
-const [, , svgArg, outArg, sizeArg] = process.argv;
-const svgPath = insideProject(svgArg, '.svg');
-const outPath = insideProject(outArg, '.png');
-const size = Number(sizeArg || 512);
-if (!Number.isInteger(size) || size < 16 || size > 4096) throw new Error('Tamaño inválido');
+const { svg: svgPath, png: outPath, size } = target;
 
 const chromePath = 'C:/Program Files/Google/Chrome/Application/chrome.exe';
 // Perfil temporal propio (único y solo del usuario), se borra al terminar.
