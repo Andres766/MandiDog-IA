@@ -6,9 +6,10 @@ hace solo: requiere cuentas y claves que no van en git.
 ## 1. API en Railway
 
 1. Crea un proyecto en Railway con dos servicios: **PostgreSQL** y el repositorio de GitHub.
-2. En el servicio del repositorio, *Settings → Root Directory* = `api`. Railway lee
-   `api/railway.json`: construye el `Dockerfile` (etapa `prod`, la última) y revisa
-   `/health` antes de dar por buena cada versión.
+2. En el servicio del repositorio, *Settings*: **Root Directory** = `/api` y **Config file
+   path** = `/api/railway.json` (en un monorepo la ruta del archivo de configuración no
+   sigue al Root Directory: va completa). Con eso Railway construye el `Dockerfile` (etapa
+   `prod`, la última) y revisa `/health` antes de dar por buena cada versión.
 3. Variables del servicio:
 
    | Variable | Valor |
@@ -33,9 +34,13 @@ hace solo: requiere cuentas y claves que no van en git.
 
 ## 2. Firebase Authentication
 
-1. Proyecto de Firebase → *Authentication* → habilita **Correo/contraseña**.
+1. Proyecto de Firebase → *Authentication* → *Sign-in method*: habilita **Correo/contraseña**
+   y **Google** (pide un correo de soporte). El botón "Continuar con Google" de la app usa
+   el flujo de Firebase (`signInWithProvider`), sin paquetes extra.
 2. Registra la app Android `co.edu.ucc.mandidog` con los SHA-1 y SHA-256 de la llave de
-   subida (paso 3) y, si usas Google Play, los de *App Signing* de Play Console.
+   subida (paso 3) y, si usas Google Play, los de *App Signing* de Play Console. Para
+   probar desde tu PC agrega también el SHA-1 de la llave de depuración. Sin el SHA-1
+   correcto, el acceso con Google falla.
 3. Copia a `app/dart_defines.local.json` (está en `.gitignore`): `FIREBASE_API_KEY`,
    `FIREBASE_APP_ID`, `FIREBASE_PROJECT_ID` y `FIREBASE_MESSAGING_SENDER_ID`, y cambia
    `AUTH_MODE` a `firebase`.

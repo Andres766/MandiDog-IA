@@ -36,7 +36,11 @@ class EmptyState extends StatelessWidget {
       child: Column(
         children: [
           ExcludeSemantics(
-            child: Icon(icon, size: 40, color: scheme.onSurfaceVariant),
+            child: CircleAvatar(
+              radius: 36,
+              backgroundColor: scheme.primaryContainer,
+              child: Icon(icon, size: 34, color: scheme.primary),
+            ),
           ),
           const SizedBox(height: Spacing.md),
           Text(

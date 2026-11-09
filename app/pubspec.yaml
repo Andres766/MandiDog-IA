@@ -42,6 +42,12 @@ dependencies:
   intl: ^0.20.2
   flutter_localizations:
     sdk: flutter
+  flutter_animate: ^4.5.2
+  animations: ^2.2.0
+  shared_preferences: ^2.5.6
+  flutter_svg: ^2.3.2
+  image_picker: ^1.2.4
+  path_provider: ^2.1.6
 
 dev_dependencies:
   flutter_test:
@@ -63,47 +69,53 @@ dev_dependencies:
 flutter:
   uses-material-design: true
 
-  # Licencias SIL OFL de las tipografías (se muestran en "Licencias de software").
   assets:
-    - assets/fonts/OFL-NunitoSans.txt
-    - assets/fonts/OFL-VarelaRound.txt
+    # Licencias SIL OFL de las tipografías (se muestran en "Licencias de software").
+    - assets/fonts/OFL-Nunito.txt
+    - assets/fonts/OFL-DMSans.txt
+    - assets/brand/
+    - assets/illustrations/
 
   # Incluidas en la app (sin descargarlas de Google): funcionan sin conexión y no
   # envían datos a terceros.
   fonts:
-    - family: NunitoSans
+    - family: Nunito
       fonts:
-        - asset: assets/fonts/NunitoSans-Regular.ttf
-        - asset: assets/fonts/NunitoSans-SemiBold.ttf
+        - asset: assets/fonts/Nunito-SemiBold.ttf
           weight: 600
-        - asset: assets/fonts/NunitoSans-Bold.ttf
+        - asset: assets/fonts/Nunito-Bold.ttf
           weight: 700
-    - family: VarelaRound
+        - asset: assets/fonts/Nunito-ExtraBold.ttf
+          weight: 800
+    - family: DMSans
       fonts:
-        - asset: assets/fonts/VarelaRound-Regular.ttf
+        - asset: assets/fonts/DMSans-Regular.ttf
+        - asset: assets/fonts/DMSans-Medium.ttf
+          weight: 500
+        - asset: assets/fonts/DMSans-SemiBold.ttf
+          weight: 600
+        - asset: assets/fonts/DMSans-Bold.ttf
+          weight: 700
 
 
-# Ícono y pantalla de arranque (generados con tool/make_icons.py):
+# Ícono y pantalla de arranque. Fuentes vectoriales en tool/brand/ (node render.mjs):
 #   dart run flutter_launcher_icons && dart run flutter_native_splash:create
 flutter_launcher_icons:
   android: true
   ios: false
   image_path: assets/icon/icon.png
-  adaptive_icon_background: "#0F6E73"
+  adaptive_icon_background: "#4A5FD9"
   adaptive_icon_foreground: assets/icon/icon_foreground.png
   web:
     generate: true
     image_path: assets/icon/icon.png
-    background_color: "#EEF2F3"
-    theme_color: "#0F6E73"
+    background_color: "#4A5FD9"
+    theme_color: "#4A5FD9"
 
 flutter_native_splash:
-  color: "#EEF2F3"
-  color_dark: "#111619"
+  color: "#4A5FD9"
   image: assets/icon/splash.png
   android_12:
-    color: "#EEF2F3"
-    color_dark: "#111619"
-    image: assets/icon/icon_foreground.png
-    icon_background_color: "#0F6E73"
+    color: "#4A5FD9"
+    image: assets/icon/splash.png
   web: false

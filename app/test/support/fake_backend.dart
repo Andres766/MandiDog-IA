@@ -8,9 +8,11 @@ import 'package:http/testing.dart';
 import 'package:mandidog/app.dart';
 import 'package:mandidog/core/api/mandidog_api.dart';
 import 'package:mandidog/core/auth/auth_service.dart';
+import 'package:mandidog/core/local_store.dart';
 import 'package:mandidog/core/providers.dart';
 import 'package:mandidog/features/capture/data/tooth_scanner.dart';
 import 'package:mandidog/features/consent/consent_text.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 const kUserId = '00000000-0000-4000-8000-000000000001';
 
@@ -294,7 +296,9 @@ Future<void> pumpApp(
   FakeBackend backend, {
   AuthService? auth,
   bool sdkAvailable = false,
+  bool onboardingSeen = true,
 }) async {
+  SharedPreferences.setMockInitialValues({'onboarding_seen': onboardingSeen});
   final authService = auth ?? DevAuthService(initialUser: 'ana');
   await tester.pumpWidget(
     ProviderScope(
@@ -302,6 +306,7 @@ Future<void> pumpApp(
         authServiceProvider.overrideWithValue(authService),
         apiProvider.overrideWithValue(backend.api(authService)),
         sdkAvailableProvider.overrideWithValue(sdkAvailable),
+        petPhotoStoreProvider.overrideWithValue(MemoryPetPhotoStore()),
         toothScannerProvider.overrideWithValue(
           ToothScanner(sdkKey: 'tt_pk_test_x'),
         ),
@@ -310,6 +315,9 @@ Future<void> pumpApp(
       child: const MandiDogApp(),
     ),
   );
+  await tester.pumpAndSettle();
+  // Deja pasar la pantalla de arranque (dura 1,4 s).
+  await tester.pump(const Duration(milliseconds: 1600));
   await tester.pumpAndSettle();
 }
 
@@ -331,6 +339,12 @@ Future<void> tapWidget(WidgetTester tester, Finder finder) async {
   await bringIntoView(tester, finder);
   await tester.tap(finder.first);
   await tester.pumpAndSettle();
+}
+
+/// Abre la ficha de un perro desde el inicio. Su nombre aparece en la fila de
+/// avatares (que solo lo selecciona) y en la tarjeta (que abre la ficha).
+Future<void> openPet(WidgetTester tester, String name) async {
+  await tapWidget(tester, find.text(name).last);
 }
 
 Future<void> tapText(WidgetTester tester, String text) =>

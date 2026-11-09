@@ -6,7 +6,6 @@ import '../../core/auth/auth_service.dart';
 import '../../core/config.dart';
 import '../../core/providers.dart';
 import '../../core/theme/app_theme.dart';
-import '../../shared/widgets/page_body.dart';
 import '../../shared/widgets/states.dart';
 import 'auth_widgets.dart';
 
@@ -16,18 +15,15 @@ class LoginPage extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final auth = ref.watch(authServiceProvider);
-    return Scaffold(
-      body: SafeArea(
-        child: PageBody(
-          children: [
-            const BrandHeader(),
-            if (auth is DevAuthService)
-              _DevLogin(auth: auth)
-            else
-              const _FirebaseLogin(),
-          ],
-        ),
-      ),
+    return AuthScaffold(
+      title: '¡Hola de nuevo!',
+      subtitle: 'Entra para revisar la sonrisa de tus perros.',
+      children: [
+        if (auth is DevAuthService)
+          _DevLogin(auth: auth)
+        else
+          const _FirebaseLogin(),
+      ],
     );
   }
 }
@@ -53,21 +49,27 @@ class _FirebaseLoginState extends ConsumerState<_FirebaseLogin> {
     super.dispose();
   }
 
-  Future<void> _submit() async {
-    if (!_form.currentState!.validate()) return;
+  Future<void> _run(Future<void> Function() action) async {
     setState(() {
       _busy = true;
       _error = null;
     });
     try {
-      await ref
-          .read(authServiceProvider)
-          .signIn(email: _email.text, password: _password.text);
+      await action();
     } catch (e) {
       if (mounted) setState(() => _error = friendlyError(e));
     } finally {
       if (mounted) setState(() => _busy = false);
     }
+  }
+
+  Future<void> _submit() async {
+    if (!_form.currentState!.validate()) return;
+    await _run(
+      () => ref
+          .read(authServiceProvider)
+          .signIn(email: _email.text, password: _password.text),
+    );
   }
 
   @override
@@ -87,6 +89,7 @@ class _FirebaseLoginState extends ConsumerState<_FirebaseLogin> {
               validator: validateEmail,
               decoration: const InputDecoration(
                 labelText: 'Correo electrónico',
+                prefixIcon: Icon(Icons.mail_outline),
               ),
             ),
             const SizedBox(height: Spacing.md),
@@ -99,15 +102,57 @@ class _FirebaseLoginState extends ConsumerState<_FirebaseLogin> {
               ),
             ),
             const SizedBox(height: Spacing.sm),
-            BusyButton(label: 'Ingresar', busy: _busy, onPressed: _submit),
-            const SizedBox(height: Spacing.md),
-            OutlinedButton(
-              onPressed: _busy ? null : () => context.push('/register'),
-              child: const Text('Crear una cuenta'),
+            BusyButton(
+              label: 'Iniciar sesión',
+              busy: _busy,
+              onPressed: _submit,
+            ),
+            const OrDivider(),
+            GoogleButton(
+              onPressed: _busy
+                  ? null
+                  : () => _run(
+                      () => ref.read(authServiceProvider).signInWithGoogle(),
+                    ),
+            ),
+            const SizedBox(height: Spacing.lg),
+            _SwitchLink(
+              question: '¿No tienes cuenta?',
+              action: 'Regístrate',
+              onTap: _busy ? null : () => context.push('/register'),
             ),
           ],
         ),
       ),
+    );
+  }
+}
+
+/// "¿No tienes cuenta? Regístrate" centrado al pie del formulario.
+class _SwitchLink extends StatelessWidget {
+  const _SwitchLink({
+    required this.question,
+    required this.action,
+    required this.onTap,
+  });
+
+  final String question;
+  final String action;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        Text(
+          question,
+          style: TextStyle(
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
+          ),
+        ),
+        TextButton(onPressed: onTap, child: Text(action)),
+      ],
     );
   }
 }
@@ -145,8 +190,11 @@ class _DevLoginState extends State<_DevLogin> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Card(
-          color: scheme.tertiaryContainer,
+        DecoratedBox(
+          decoration: BoxDecoration(
+            color: scheme.tertiaryContainer,
+            borderRadius: BorderRadius.circular(Spacing.radiusField),
+          ),
           child: Padding(
             padding: const EdgeInsets.all(Spacing.md),
             child: Row(
@@ -177,6 +225,7 @@ class _DevLoginState extends State<_DevLogin> {
           decoration: const InputDecoration(
             labelText: 'Usuario de prueba',
             helperText: 'Letras, números, punto, guion o guion bajo',
+            prefixIcon: Icon(Icons.person_outline),
           ),
         ),
         const SizedBox(height: Spacing.lg),

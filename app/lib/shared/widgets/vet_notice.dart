@@ -12,22 +12,28 @@ class VetNotice extends StatelessWidget {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     return Material(
-      color: scheme.secondaryContainer,
+      color: scheme.surfaceContainerLowest,
+      shape: Border(top: BorderSide(color: scheme.outlineVariant)),
       child: SafeArea(
         top: false,
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
           child: Row(
             children: [
-              Icon(
-                Icons.medical_services_outlined,
-                color: scheme.onSecondaryContainer,
+              CircleAvatar(
+                radius: 18,
+                backgroundColor: scheme.primaryContainer,
+                child: Icon(
+                  Icons.medical_services_outlined,
+                  size: 18,
+                  color: scheme.primary,
+                ),
               ),
               const SizedBox(width: 12),
               Expanded(
                 child: Text(
                   text,
-                  style: TextStyle(color: scheme.onSecondaryContainer),
+                  style: TextStyle(color: scheme.onSurface, fontSize: 13.5),
                 ),
               ),
             ],

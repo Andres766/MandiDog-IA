@@ -8,7 +8,9 @@ import '../../core/providers.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/theme/risk_style.dart';
 import '../../shared/widgets/page_body.dart';
-import '../../shared/widgets/pet_tag.dart';
+import '../../shared/widgets/motion.dart';
+import '../../shared/widgets/pet_avatar.dart';
+import '../../shared/widgets/risk_badge.dart';
 import '../../shared/widgets/states.dart';
 import '../../shared/widgets/vet_notice.dart';
 import '../pets/pet_widgets.dart';
@@ -82,52 +84,70 @@ class _Result extends StatelessWidget {
     final textTheme = Theme.of(context).textTheme;
     final style = RiskStyle.of(context, analysis.riskLevel);
     final meta = [
+      ?petName,
       formatDateTime(analysis.createdAt),
       analysis.positionLabel,
     ].whereType<String>().join(' · ');
+    final photo = analysis.photoUrls.isEmpty
+        ? PetAvatar(petId: petId, name: petName ?? '?', size: 140, hero: false)
+        : AnalysisPhoto(analysis: analysis, size: 140);
 
     return PageBody(
       children: [
-        if (petName != null) ...[
-          TagChip(hue: TagHue.forId(petId), name: petName!),
-          const SizedBox(height: Spacing.md),
-        ],
-        if (analysis.isSimulated) ...[
-          Card(
-            color: scheme.tertiaryContainer,
-            child: ListTile(
-              leading: Icon(
-                Icons.science_outlined,
-                color: scheme.onTertiaryContainer,
-              ),
-              title: Text(
-                'Resultado simulado: es el ejemplo oficial de AI for Pet, no un análisis '
-                'real de tu perro.',
-                style: TextStyle(color: scheme.onTertiaryContainer),
-              ),
-            ),
-          ),
-          const SizedBox(height: Spacing.md),
-        ],
         Semantics(
           container: true,
           label:
               'Resultado: nivel ${style.short}, ${style.label}. ${style.description}',
           excludeSemantics: true,
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              RiskStamp(level: analysis.riskLevel, large: true),
+              const SizedBox(height: Spacing.sm),
+              RiskRing(level: analysis.riskLevel, size: 176, child: photo),
               const SizedBox(height: Spacing.md),
-              Text(style.description, style: textTheme.titleMedium),
+              RiskBadge(level: analysis.riskLevel, size: RiskBadgeSize.large),
+              const SizedBox(height: Spacing.sm + 4),
+              Text(
+                style.description,
+                textAlign: TextAlign.center,
+                style: textTheme.titleMedium,
+              ),
             ],
           ),
-        ),
+        ).entrance(context),
         const SizedBox(height: Spacing.sm),
         Text(
-          ['Nivel ${style.short.toLowerCase()}', meta].join(' · '),
-          style: TextStyle(color: scheme.onSurfaceVariant),
+          meta,
+          textAlign: TextAlign.center,
+          style: TextStyle(color: scheme.onSurfaceVariant, fontSize: 13),
         ),
+        if (analysis.isSimulated) ...[
+          const SizedBox(height: Spacing.md),
+          DecoratedBox(
+            decoration: BoxDecoration(
+              color: scheme.tertiaryContainer,
+              borderRadius: BorderRadius.circular(Spacing.radiusField),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.all(Spacing.md),
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.science_outlined,
+                    color: scheme.onTertiaryContainer,
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      'Resultado simulado: es el ejemplo oficial de AI for Pet, no un '
+                      'análisis real de tu perro.',
+                      style: TextStyle(color: scheme.onTertiaryContainer),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
         const SectionTitle('Lo que encontró el análisis'),
         if (analysis.findings.isEmpty)
           const Text('El análisis no reportó hallazgos específicos.')
@@ -141,14 +161,36 @@ class _Result extends StatelessWidget {
                 ],
               ],
             ),
-          ),
+          ).entrance(context, index: 1),
         const SectionTitle('Qué hacer ahora'),
-        // El aviso del veterinario ya está fijo abajo: no se repite aquí.
-        Text(
-          analysis.recommendation.replaceAll(VetNotice.text, '').trim(),
-          style: textTheme.bodyLarge,
-        ),
-        const SizedBox(height: Spacing.lg),
+        DecoratedBox(
+          decoration: BoxDecoration(
+            color: scheme.primaryContainer,
+            borderRadius: BorderRadius.circular(Spacing.radius),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(Spacing.md),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Icon(Icons.event_available_outlined, color: scheme.primary),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    // El aviso del veterinario ya está fijo abajo: no se repite.
+                    analysis.recommendation
+                        .replaceAll(VetNotice.text, '')
+                        .trim(),
+                    style: textTheme.bodyLarge?.copyWith(
+                      color: scheme.onPrimaryContainer,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ).entrance(context, index: 2),
+        const SizedBox(height: Spacing.md),
         Text(
           'Análisis hecho con inteligencia artificial por AI for Pet '
           '(${analysis.modelVersion}). MandiDog IA no reemplaza la valoración de un '
@@ -182,26 +224,46 @@ class _FindingRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    final (icon, color) = switch (finding.status) {
-      FindingStatus.abnormal => (
-        Icons.warning_amber_rounded,
-        RiskStyle.of(
+    final (icon, fg, bg) = switch (finding.status) {
+      FindingStatus.abnormal => () {
+        final s = RiskStyle.of(
           context,
           level == RiskLevel.green ? RiskLevel.yellow : level,
-        ).foreground,
+        );
+        return (Icons.warning_amber_rounded, s.foreground, s.background);
+      }(),
+      FindingStatus.normal => () {
+        final s = RiskStyle.of(context, RiskLevel.green);
+        return (Icons.check_circle_outline, s.foreground, s.background);
+      }(),
+      FindingStatus.unknown => (
+        Icons.help_outline,
+        scheme.onSurfaceVariant,
+        scheme.surfaceContainerHigh,
       ),
-      FindingStatus.normal => (
-        Icons.check_circle_outline,
-        RiskStyle.of(context, RiskLevel.green).foreground,
-      ),
-      FindingStatus.unknown => (Icons.help_outline, scheme.onSurfaceVariant),
     };
     return ListTile(
-      leading: ExcludeSemantics(child: Icon(icon, color: color)),
+      leading: ExcludeSemantics(
+        child: CircleAvatar(
+          radius: 20,
+          backgroundColor: bg,
+          child: Icon(icon, color: fg, size: 22),
+        ),
+      ),
       title: Text(finding.name),
-      trailing: Text(
-        finding.status.label,
-        style: TextStyle(fontWeight: FontWeight.w700, color: color),
+      trailing: DecoratedBox(
+        decoration: ShapeDecoration(color: bg, shape: const StadiumBorder()),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+          child: Text(
+            finding.status.label,
+            style: TextStyle(
+              fontWeight: FontWeight.w700,
+              color: fg,
+              fontSize: 13,
+            ),
+          ),
+        ),
       ),
     );
   }

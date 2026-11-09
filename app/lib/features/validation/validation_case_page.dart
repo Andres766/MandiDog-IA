@@ -7,7 +7,7 @@ import '../../core/providers.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/theme/risk_style.dart';
 import '../../shared/widgets/page_body.dart';
-import '../../shared/widgets/pet_tag.dart';
+import '../../shared/widgets/risk_badge.dart';
 import '../../shared/widgets/states.dart';
 import '../pets/pet_widgets.dart';
 
@@ -282,7 +282,7 @@ class _RevealCard extends StatelessWidget {
             const SizedBox(height: Spacing.md),
             Text('La IA', style: TextStyle(color: scheme.onSurfaceVariant)),
             const SizedBox(height: Spacing.xs),
-            RiskStamp(level: reveal.aiRiskLevel),
+            RiskBadge(level: reveal.aiRiskLevel),
             const SizedBox(height: Spacing.xs),
             Text(
               reveal.aiSeesSigns

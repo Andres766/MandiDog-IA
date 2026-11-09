@@ -1,38 +1,97 @@
+import 'package:animations/animations.dart';
 import 'package:flutter/material.dart';
 
-/// Sistema visual de MandiDog IA: "placa de collar" (DESIGN.md).
+/// Sistema visual de MandiDog IA (DESIGN.md): app de cuidado de mascotas en la línea
+/// de PetDesk, Petcube y TTcare.
 ///
-/// - Fondo de aluminio cepillado frío y tinta grafito.
-/// - El teal profundo es el color de acción: solo aparece en lo que se puede tocar.
-/// - Cada perro tiene un tono anodizado propio ([TagHue]).
+/// - Fondo crema cálido, tarjetas blancas redondeadas y botones en píldora.
+/// - Azul cobalto de marca para acciones y acentos.
 /// - Verde, ámbar y rojo se reservan EXCLUSIVAMENTE para el nivel de riesgo.
 class AppTheme {
   const AppTheme._();
 
-  static const seed = Color(0xFF0F6E73);
+  static const brand = Color(0xFF4A5FD9);
+  static const brandDeep = Color(0xFF2B3A8C);
+  static const brandTint = Color(0xFFE9ECFC);
+  static const lilac = Color(0xFFB8A8F0);
+  static const ink = Color(0xFF1C2333);
+  static const cream = Color(0xFFFAF6F0);
 
-  static const headingFont = 'VarelaRound';
-  static const bodyFont = 'NunitoSans';
+  static const headingFont = 'Nunito';
+  static const bodyFont = 'DMSans';
 
   static ThemeData light() => _build(
-    ColorScheme.fromSeed(
-      seedColor: seed,
-      surface: const Color(0xFFEEF2F3),
-      onSurface: const Color(0xFF1C2329),
+    const ColorScheme(
+      brightness: Brightness.light,
+      primary: brand,
+      onPrimary: Colors.white,
+      primaryContainer: brandTint,
+      onPrimaryContainer: brandDeep,
+      secondary: Color(0xFF6B5BC9),
+      onSecondary: Colors.white,
+      secondaryContainer: Color(0xFFEFEAFD),
+      onSecondaryContainer: Color(0xFF3B2F86),
+      tertiary: Color(0xFF0E6E8C),
+      onTertiary: Colors.white,
+      tertiaryContainer: Color(0xFFE0F2F8),
+      onTertiaryContainer: Color(0xFF0B4A5E),
+      error: Color(0xFFB3261E),
+      onError: Colors.white,
+      errorContainer: Color(0xFFFCE8E6),
+      onErrorContainer: Color(0xFF8C1D18),
+      surface: cream,
+      onSurface: ink,
+      onSurfaceVariant: Color(0xFF5F6576),
       surfaceContainerLowest: Colors.white,
-      outlineVariant: const Color(0xFFD3DADD),
+      surfaceContainerLow: Color(0xFFFDFBF7),
+      surfaceContainer: Color(0xFFF4EFE7),
+      surfaceContainerHigh: Color(0xFFEFE9E0),
+      surfaceContainerHighest: Color(0xFFE9E2D7),
+      outline: Color(0xFF9A9FAD),
+      outlineVariant: Color(0xFFECE6DC),
+      shadow: Colors.black,
+      scrim: Colors.black,
+      inverseSurface: Color(0xFF2A3042),
+      onInverseSurface: Color(0xFFF2F3F8),
+      inversePrimary: Color(0xFFB9C3FF),
     ),
     RiskColors.light,
   );
 
   static ThemeData dark() => _build(
-    ColorScheme.fromSeed(
-      seedColor: seed,
+    const ColorScheme(
       brightness: Brightness.dark,
-      surface: const Color(0xFF111619),
-      onSurface: const Color(0xFFE3E8EA),
-      surfaceContainerLowest: const Color(0xFF181F23),
-      outlineVariant: const Color(0xFF2E383E),
+      primary: Color(0xFF9AA8FF),
+      onPrimary: Color(0xFF101A5C),
+      primaryContainer: Color(0xFF2B3A8C),
+      onPrimaryContainer: Color(0xFFDDE2FF),
+      secondary: Color(0xFFC6BAFF),
+      onSecondary: Color(0xFF2A1F6B),
+      secondaryContainer: Color(0xFF3B2F86),
+      onSecondaryContainer: Color(0xFFE9E3FF),
+      tertiary: Color(0xFF8ED3EA),
+      onTertiary: Color(0xFF00384A),
+      tertiaryContainer: Color(0xFF0B4A5E),
+      onTertiaryContainer: Color(0xFFD3F0FA),
+      error: Color(0xFFFFB4AB),
+      onError: Color(0xFF690005),
+      errorContainer: Color(0xFF93000A),
+      onErrorContainer: Color(0xFFFFDAD6),
+      surface: Color(0xFF12141C),
+      onSurface: Color(0xFFECEEF5),
+      onSurfaceVariant: Color(0xFFAEB3C2),
+      surfaceContainerLowest: Color(0xFF1B1E29),
+      surfaceContainerLow: Color(0xFF181B25),
+      surfaceContainer: Color(0xFF20232F),
+      surfaceContainerHigh: Color(0xFF262A37),
+      surfaceContainerHighest: Color(0xFF2D3140),
+      outline: Color(0xFF6E7487),
+      outlineVariant: Color(0xFF2C3040),
+      shadow: Colors.black,
+      scrim: Colors.black,
+      inverseSurface: Color(0xFFECEEF5),
+      onInverseSurface: Color(0xFF1C2333),
+      inversePrimary: brand,
     ),
     RiskColors.dark,
   );
@@ -44,8 +103,14 @@ class AppTheme {
       fontFamily: bodyFont,
     );
     final text = base.textTheme;
-    TextStyle? heading(TextStyle? s) =>
-        s?.copyWith(fontFamily: headingFont, color: scheme.onSurface);
+    TextStyle? heading(TextStyle? s, {FontWeight weight = FontWeight.w800}) =>
+        s?.copyWith(
+          fontFamily: headingFont,
+          fontWeight: weight,
+          color: scheme.onSurface,
+          letterSpacing: -0.2,
+        );
+    const pill = StadiumBorder();
 
     return base.copyWith(
       extensions: [risk],
@@ -56,23 +121,34 @@ class AppTheme {
         headlineMedium: heading(text.headlineMedium),
         headlineSmall: heading(text.headlineSmall),
         titleLarge: heading(text.titleLarge),
+        titleMedium: heading(text.titleMedium, weight: FontWeight.w700),
         bodyLarge: text.bodyLarge?.copyWith(height: 1.5),
         bodyMedium: text.bodyMedium?.copyWith(height: 1.5),
+      ),
+      pageTransitionsTheme: const PageTransitionsTheme(
+        builders: {
+          TargetPlatform.android: SharedAxisPageTransitionsBuilder(
+            transitionType: SharedAxisTransitionType.horizontal,
+          ),
+        },
       ),
       appBarTheme: AppBarTheme(
         backgroundColor: scheme.surface,
         foregroundColor: scheme.onSurface,
         surfaceTintColor: Colors.transparent,
+        scrolledUnderElevation: 0,
         centerTitle: false,
         titleTextStyle: TextStyle(
           fontFamily: headingFont,
-          fontSize: 22,
+          fontWeight: FontWeight.w800,
+          fontSize: 20,
           color: scheme.onSurface,
         ),
       ),
       cardTheme: CardThemeData(
         elevation: 0,
         color: scheme.surfaceContainerLowest,
+        surfaceTintColor: Colors.transparent,
         margin: EdgeInsets.zero,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(Spacing.radius),
@@ -81,28 +157,29 @@ class AppTheme {
       ),
       filledButtonTheme: FilledButtonThemeData(
         style: FilledButton.styleFrom(
-          minimumSize: const Size(64, Spacing.touchTarget),
+          minimumSize: const Size(64, 54),
+          padding: const EdgeInsets.symmetric(horizontal: Spacing.lg),
           textStyle: const TextStyle(
             fontFamily: bodyFont,
             fontWeight: FontWeight.w700,
             fontSize: 16,
           ),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(Spacing.radius),
-          ),
+          shape: pill,
         ),
       ),
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: OutlinedButton.styleFrom(
-          minimumSize: const Size(64, Spacing.touchTarget),
+          minimumSize: const Size(64, 54),
+          padding: const EdgeInsets.symmetric(horizontal: Spacing.lg),
+          foregroundColor: scheme.onSurface,
+          backgroundColor: scheme.surfaceContainerLowest,
+          side: BorderSide(color: scheme.outlineVariant, width: 1.5),
           textStyle: const TextStyle(
             fontFamily: bodyFont,
             fontWeight: FontWeight.w600,
             fontSize: 16,
           ),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(Spacing.radius),
-          ),
+          shape: pill,
         ),
       ),
       textButtonTheme: TextButtonThemeData(
@@ -110,16 +187,40 @@ class AppTheme {
           minimumSize: const Size(48, Spacing.touchTarget),
           textStyle: const TextStyle(
             fontFamily: bodyFont,
-            fontWeight: FontWeight.w600,
+            fontWeight: FontWeight.w700,
           ),
+          shape: pill,
         ),
       ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
         fillColor: scheme.surfaceContainerLowest,
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(Spacing.radius),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 18,
+          vertical: 16,
         ),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(Spacing.radiusField),
+          borderSide: BorderSide(color: scheme.outlineVariant, width: 1.5),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(Spacing.radiusField),
+          borderSide: BorderSide(color: scheme.outlineVariant, width: 1.5),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(Spacing.radiusField),
+          borderSide: BorderSide(color: scheme.primary, width: 2),
+        ),
+        errorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(Spacing.radiusField),
+          borderSide: BorderSide(color: scheme.error, width: 1.5),
+        ),
+        focusedErrorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(Spacing.radiusField),
+          borderSide: BorderSide(color: scheme.error, width: 2),
+        ),
+        prefixIconColor: scheme.onSurfaceVariant,
+        suffixIconColor: scheme.onSurfaceVariant,
       ),
       floatingActionButtonTheme: FloatingActionButtonThemeData(
         extendedTextStyle: const TextStyle(
@@ -129,15 +230,49 @@ class AppTheme {
         ),
         backgroundColor: scheme.primary,
         foregroundColor: scheme.onPrimary,
+        shape: pill,
       ),
-      snackBarTheme: const SnackBarThemeData(
+      dialogTheme: DialogThemeData(
+        backgroundColor: scheme.surfaceContainerLowest,
+        surfaceTintColor: Colors.transparent,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(Spacing.radiusLg),
+        ),
+      ),
+      bottomSheetTheme: BottomSheetThemeData(
+        backgroundColor: scheme.surfaceContainerLowest,
+        surfaceTintColor: Colors.transparent,
+        showDragHandle: true,
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(
+            top: Radius.circular(Spacing.radiusLg),
+          ),
+        ),
+      ),
+      listTileTheme: ListTileThemeData(
+        iconColor: scheme.onSurfaceVariant,
+        titleTextStyle: TextStyle(
+          fontFamily: bodyFont,
+          fontWeight: FontWeight.w600,
+          fontSize: 16,
+          color: scheme.onSurface,
+        ),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(Spacing.radius),
+        ),
+      ),
+      dividerTheme: DividerThemeData(color: scheme.outlineVariant),
+      snackBarTheme: SnackBarThemeData(
         behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(Spacing.radiusField),
+        ),
       ),
     );
   }
 }
 
-/// Ritmo de 4/8 dp.
+/// Ritmo de 4/8 dp y radios.
 class Spacing {
   const Spacing._();
 
@@ -146,7 +281,16 @@ class Spacing {
   static const md = 16.0;
   static const lg = 24.0;
   static const xl = 32.0;
-  static const radius = 16.0;
+  static const xxl = 48.0;
+
+  /// Tarjetas.
+  static const radius = 20.0;
+
+  /// Campos de texto y avisos.
+  static const radiusField = 16.0;
+
+  /// Hojas, encabezados y paneles grandes.
+  static const radiusLg = 28.0;
   static const touchTarget = 48.0;
 
   /// Ancho máximo del contenido en tabletas y navegador.
@@ -176,7 +320,7 @@ class RiskColors extends ThemeExtension<RiskColors> {
     greenFg: Color(0xFF166534),
     greenBg: Color(0xFFDCFCE7),
     yellowFg: Color(0xFF854D0E),
-    yellowBg: Color(0xFFFEF9C3),
+    yellowBg: Color(0xFFFEF3C7),
     redFg: Color(0xFF991B1B),
     redBg: Color(0xFFFEE2E2),
   );
@@ -198,29 +342,34 @@ class RiskColors extends ThemeExtension<RiskColors> {
       other is RiskColors && t >= 0.5 ? other : this;
 }
 
-/// Tonos anodizados de las placas: uno por perro, estable según su id.
-/// Ninguno es verde, ámbar ni rojo (esos colores significan riesgo) ni se parece al
-/// teal de acción, que queda solo para lo que se puede tocar. Todos admiten texto
-/// blanco con contraste ≥ 4.5:1.
-class TagHue {
-  const TagHue._();
+/// Colores del avatar de un perro sin foto: fondo pastel y tinta de su mismo tono.
+/// Ninguno es verde, ámbar ni rojo (esos colores significan riesgo).
+class PetPalette {
+  const PetPalette._();
 
-  static const values = [
-    Color(0xFF2D4FA6), // cobalto
-    Color(0xFF5B45A8), // violeta
-    Color(0xFF7A3B69), // ciruela
-    Color(0xFF7A4A2B), // bronce
-    Color(0xFF3B4752), // grafito
+  static const _light = [
+    (Color(0xFFE3E7FD), Color(0xFF2B3A8C)), // pervinca
+    (Color(0xFFEDE7FE), Color(0xFF4C3A9E)), // lila
+    (Color(0xFFDDF0FA), Color(0xFF0B4A5E)), // cielo
+    (Color(0xFFF1EADF), Color(0xFF5C4B37)), // arena
+    (Color(0xFFE6E9F0), Color(0xFF334155)), // pizarra
   ];
 
-  /// Placa de la marca (pantallas de acceso): grafito, neutra.
-  static const brand = Color(0xFF3B4752);
+  static const _dark = [
+    (Color(0xFF2B3A8C), Color(0xFFDDE2FF)),
+    (Color(0xFF3B2F86), Color(0xFFE9E3FF)),
+    (Color(0xFF0B4A5E), Color(0xFFD3F0FA)),
+    (Color(0xFF4A3D2E), Color(0xFFF1EADF)),
+    (Color(0xFF334155), Color(0xFFE6E9F0)),
+  ];
 
-  static Color forId(String id) {
+  /// (fondo, tinta) estable según el id del perro.
+  static (Color, Color) forId(String id, Brightness brightness) {
     var hash = 0;
     for (final unit in id.codeUnits) {
       hash = (hash * 31 + unit) & 0x7fffffff;
     }
-    return values[hash % values.length];
+    final list = brightness == Brightness.dark ? _dark : _light;
+    return list[hash % list.length];
   }
 }

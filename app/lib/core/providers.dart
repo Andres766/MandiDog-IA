@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../features/capture/data/tooth_scanner.dart';
@@ -5,6 +7,7 @@ import 'api/mandidog_api.dart';
 import 'api/models.dart';
 import 'auth/auth_service.dart';
 import 'config.dart';
+import 'local_store.dart';
 
 /// Se sobrescribe en main() con DevAuthService o FirebaseAuthService.
 final authServiceProvider = Provider<AuthService>(
@@ -57,6 +60,15 @@ final pendingCasesProvider = FutureProvider<List<PendingCase>>(
 
 final validationSummaryProvider = FutureProvider<ValidationSummary>(
   (ref) => ref.watch(apiProvider).validationSummary(),
+);
+
+final petPhotoStoreProvider = Provider<PetPhotoStore>(
+  (ref) => defaultPetPhotoStore(),
+);
+
+/// Foto del perro guardada en el teléfono (null si no tiene).
+final petPhotoProvider = FutureProvider.family<Uint8List?, String>(
+  (ref, petId) => ref.watch(petPhotoStoreProvider).read(petId),
 );
 
 /// Tras registrar o borrar algo, refresca lo que muestra la app.

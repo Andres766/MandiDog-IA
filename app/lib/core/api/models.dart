@@ -172,6 +172,7 @@ class Analysis {
     required this.modelVersion,
     required this.recommendation,
     required this.createdAt,
+    this.photoUrls = const [],
   });
 
   factory Analysis.fromJson(Map<String, dynamic> json) => Analysis(
@@ -184,6 +185,7 @@ class Analysis {
     modelVersion: json['model_version'] as String,
     recommendation: json['recommendation'] as String,
     createdAt: _date(json['created_at'])!,
+    photoUrls: ((json['photo_urls'] as List?) ?? const []).cast<String>(),
   );
 
   final String id;
@@ -193,6 +195,9 @@ class Analysis {
   final String modelVersion;
   final String recommendation;
   final DateTime createdAt;
+
+  /// Recortes de la foto analizada, alojados por AI for Pet. Pueden vencer.
+  final List<String> photoUrls;
 
   /// Resultado de ejemplo usado donde no existe el SDK (navegador): no es un análisis real.
   bool get isSimulated => modelVersion.endsWith('-simulacion');

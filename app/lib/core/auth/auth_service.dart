@@ -34,6 +34,9 @@ abstract class AuthService {
     required String password,
   });
   Future<void> sendPasswordReset(String email);
+
+  /// Entrar con una cuenta de Google (Firebase abre el selector de cuentas).
+  Future<void> signInWithGoogle();
   Future<void> signOut();
 
   /// Token de Firebase para la API; null en modo desarrollo.
@@ -98,6 +101,10 @@ class DevAuthService implements AuthService {
   );
 
   @override
+  Future<void> signInWithGoogle() =>
+      throw const AuthException('Entrar con Google requiere Firebase.');
+
+  @override
   Future<void> signOut() async => _set(null);
 
   @override
@@ -157,6 +164,19 @@ class FirebaseAuthService implements AuthService {
       _guard(() => _auth.sendPasswordResetEmail(email: email.trim()));
 
   @override
+  Future<void> signInWithGoogle() => _guard(() async {
+    try {
+      await _auth.signInWithProvider(
+        GoogleAuthProvider()..setCustomParameters({'prompt': 'select_account'}),
+      );
+    } on FirebaseAuthException catch (e) {
+      // Cerrar el selector no es un error que haya que mostrar.
+      if (e.code == 'web-context-canceled' || e.code == 'canceled') return;
+      rethrow;
+    }
+  });
+
+  @override
   Future<void> signOut() => _auth.signOut();
 
   @override
@@ -184,6 +204,10 @@ class FirebaseAuthService implements AuthService {
     'weak-password' => 'La contraseña es muy débil. Usa al menos 8 caracteres.',
     'too-many-requests' =>
       'Demasiados intentos. Espera unos minutos e inténtalo de nuevo.',
+    'account-exists-with-different-credential' =>
+      'Ese correo ya tiene cuenta con contraseña. Entra con tu correo.',
+    'operation-not-allowed' =>
+      'El acceso con Google no está activado en Firebase todavía.',
     'network-request-failed' =>
       'Sin conexión. Revisa tu internet e inténtalo de nuevo.',
     _ => 'No pudimos completar la operación. Inténtalo de nuevo.',

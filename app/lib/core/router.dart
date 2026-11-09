@@ -14,6 +14,8 @@ import '../features/pets/pet_detail_page.dart';
 import '../features/pets/pet_form_page.dart';
 import '../features/pets/pets_page.dart';
 import '../features/result/result_page.dart';
+import '../features/start/onboarding_page.dart';
+import '../features/start/splash_page.dart';
 import '../features/validation/validation_case_page.dart';
 import '../features/validation/validation_list_page.dart';
 import '../features/validation/validation_summary_page.dart';
@@ -21,7 +23,7 @@ import 'api/models.dart';
 import 'auth/auth_service.dart';
 import 'providers.dart';
 
-const _publicRoutes = {'/login', '/register', '/reset-password'};
+const _publicRoutes = {'/login', '/register', '/reset-password', '/welcome'};
 
 /// Vuelve a evaluar la redirección cada vez que cambia la sesión.
 class _AuthRefresh extends ChangeNotifier {
@@ -44,9 +46,11 @@ final routerProvider = Provider<GoRouter>((ref) {
   ref.onDispose(refresh.dispose);
 
   final router = GoRouter(
-    initialLocation: '/',
+    initialLocation: '/splash',
     refreshListenable: refresh,
     redirect: (context, state) {
+      // El arranque decide a dónde ir cuando termina su animación.
+      if (state.matchedLocation == '/splash') return null;
       final signedIn = auth.currentUser != null;
       final public = _publicRoutes.contains(state.matchedLocation);
       if (!signedIn && !public) return '/login';
@@ -54,6 +58,8 @@ final routerProvider = Provider<GoRouter>((ref) {
       return null;
     },
     routes: [
+      GoRoute(path: '/splash', builder: (_, _) => const SplashPage()),
+      GoRoute(path: '/welcome', builder: (_, _) => const OnboardingPage()),
       GoRoute(path: '/login', builder: (_, _) => const LoginPage()),
       GoRoute(path: '/register', builder: (_, _) => const RegisterPage()),
       GoRoute(

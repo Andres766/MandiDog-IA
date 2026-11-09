@@ -24,10 +24,30 @@ void main() {
         expect(find.textContaining('Modo desarrollo'), findsOneWidget);
         await tapText(tester, 'Entrar');
 
-        expect(find.text('Mis perros'), findsOneWidget);
+        expect(find.textContaining('¡Hola'), findsOneWidget);
         expect(find.text('Tu primer perro'), findsOneWidget);
       },
     );
+
+    testWidgets('la primera vez muestra la presentación y luego el acceso', (
+      tester,
+    ) async {
+      useTallPhone(tester);
+      await pumpApp(
+        tester,
+        FakeBackend(),
+        auth: DevAuthService(),
+        onboardingSeen: false,
+      );
+
+      expect(find.text('Revisa sus dientes con una foto'), findsOneWidget);
+      await tapText(tester, 'Siguiente');
+      expect(find.text('Un resultado claro en segundos'), findsOneWidget);
+      await tapText(tester, 'Siguiente');
+      await tapText(tester, 'Empezar');
+
+      expect(find.text('Entrar'), findsOneWidget);
+    });
 
     testWidgets('cerrar sesión vuelve a la pantalla de acceso', (tester) async {
       useTallPhone(tester);
@@ -102,6 +122,8 @@ void main() {
         find.bySemanticsLabel(RegExp('Nivel Rojo: Consulta pronto')),
         findsWidgets,
       );
+      // Max no tiene escaneos: se ve al elegirlo en la fila de avatares.
+      await tapWidget(tester, find.bySemanticsLabel('Max'));
       expect(find.text('Sin escaneos aún'), findsOneWidget);
       semantics.dispose();
     });
@@ -111,7 +133,7 @@ void main() {
       final backend = FakeBackend()..addPet('Toby');
       await pumpApp(tester, backend);
 
-      await tapText(tester, 'Toby');
+      await openPet(tester, 'Toby');
       await tapWidget(tester, find.byTooltip('Más opciones'));
       await tapText(tester, 'Eliminar');
       expect(find.text('¿Eliminar a Toby?'), findsOneWidget);
@@ -130,8 +152,11 @@ void main() {
       final backend = FakeBackend()..addPet('Toby');
       await pumpApp(tester, backend);
 
-      expect(find.text('Revisar autorización'), findsOneWidget);
-      await tapText(tester, 'Toby');
+      expect(
+        find.text('Para escanear necesitas aceptar la autorización de datos.'),
+        findsOneWidget,
+      );
+      await openPet(tester, 'Toby');
       await tapText(tester, 'Escanear dientes');
 
       expect(find.text('Autorización de datos'), findsOneWidget);
@@ -155,7 +180,7 @@ void main() {
           ..addPet('Toby');
         await pumpApp(tester, backend);
 
-        await tapText(tester, 'Revisar autorización');
+        await tapText(tester, 'Revisar');
 
         await expectShown(tester, find.textContaining('Actualiza la app'));
         expect(find.text('He leído y acepto esta autorización'), findsNothing);
@@ -185,9 +210,9 @@ void main() {
         backend.addPet('Toby');
         await pumpApp(tester, backend);
 
-        await tapText(tester, 'Toby');
+        await openPet(tester, 'Toby');
         await tapText(tester, 'Escanear dientes');
-        expect(find.byKey(const Key('simulation-notice')), findsOneWidget);
+        await expectShown(tester, find.byKey(const Key('simulation-notice')));
         await tapText(tester, 'Simular escaneo');
 
         final sent = backend.submissions.single;
@@ -215,7 +240,7 @@ void main() {
         ..failNextSubmit = true;
       await pumpApp(tester, backend);
 
-      await tapText(tester, 'Toby');
+      await openPet(tester, 'Toby');
       await tapText(tester, 'Escanear dientes');
       await tapText(tester, 'Simular escaneo');
 
@@ -255,7 +280,7 @@ void main() {
       backend.addPet('Toby');
       await pumpApp(tester, backend, sdkAvailable: true);
 
-      await tapText(tester, 'Toby');
+      await openPet(tester, 'Toby');
       await tapText(tester, 'Escanear dientes');
       await tapText(tester, 'Abrir cámara');
 
@@ -276,7 +301,7 @@ void main() {
       backend.addPet('Toby');
       await pumpApp(tester, backend);
 
-      await tapText(tester, 'Toby');
+      await openPet(tester, 'Toby');
       await tapText(tester, 'Escanear dientes');
       await tapText(tester, 'Simular escaneo');
       await tapText(tester, 'Volver a Toby');

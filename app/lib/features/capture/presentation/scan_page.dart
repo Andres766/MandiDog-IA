@@ -7,7 +7,8 @@ import '../../../core/ids.dart';
 import '../../../core/providers.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../shared/widgets/page_body.dart';
-import '../../../shared/widgets/pet_tag.dart';
+import '../../../shared/widgets/motion.dart';
+import '../../../shared/widgets/pet_avatar.dart';
 import '../../../shared/widgets/states.dart';
 import '../../auth/auth_widgets.dart';
 import '../data/sample_result.dart';
@@ -140,15 +141,34 @@ class _ScanPageState extends ConsumerState<ScanPage> {
       appBar: AppBar(title: const Text('Escanear dientes')),
       body: PageBody(
         children: [
-          if (petName != null) ...[
-            TagChip(hue: TagHue.forId(widget.petId), name: petName),
-            const SizedBox(height: Spacing.md),
-          ],
-          Text(
-            'Antes de empezar',
-            style: Theme.of(context).textTheme.headlineSmall,
-          ),
-          const SizedBox(height: Spacing.md),
+          Row(
+            children: [
+              PetAvatar(
+                petId: widget.petId,
+                name: petName ?? '?',
+                size: 56,
+                hero: false,
+              ),
+              const SizedBox(width: Spacing.md),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Antes de empezar',
+                      style: Theme.of(context).textTheme.headlineSmall,
+                    ),
+                    if (petName != null)
+                      Text(
+                        'Revisión dental de $petName',
+                        style: TextStyle(color: scheme.onSurfaceVariant),
+                      ),
+                  ],
+                ),
+              ),
+            ],
+          ).entrance(context),
+          const SizedBox(height: Spacing.lg),
           const _Tip(
             icon: Icons.wb_sunny_outlined,
             title: 'Busca buena luz',
@@ -252,30 +272,40 @@ class _Tip extends StatelessWidget {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     return Padding(
-      padding: const EdgeInsets.only(bottom: Spacing.md),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Padding(
-            padding: const EdgeInsets.only(top: 2),
-            child: ExcludeSemantics(
-              child: Icon(icon, size: 24, color: scheme.onSurfaceVariant),
-            ),
-          ),
-          const SizedBox(width: Spacing.md),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: const TextStyle(fontWeight: FontWeight.w700),
+      padding: const EdgeInsets.only(bottom: Spacing.sm + 4),
+      child: Card(
+        child: Padding(
+          padding: const EdgeInsets.all(Spacing.md),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              ExcludeSemantics(
+                child: CircleAvatar(
+                  radius: 22,
+                  backgroundColor: scheme.primaryContainer,
+                  child: Icon(icon, size: 22, color: scheme.primary),
                 ),
-                Text(text, style: TextStyle(color: scheme.onSurfaceVariant)),
-              ],
-            ),
+              ),
+              const SizedBox(width: Spacing.md),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: const TextStyle(fontWeight: FontWeight.w700),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      text,
+                      style: TextStyle(color: scheme.onSurfaceVariant),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }

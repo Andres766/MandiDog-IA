@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../core/providers.dart';
 import '../../core/theme/app_theme.dart';
+import '../../shared/widgets/brand.dart';
 import '../../shared/widgets/page_body.dart';
 import '../../shared/widgets/states.dart';
 
@@ -43,7 +44,6 @@ class AccountPage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final scheme = Theme.of(context).colorScheme;
     final me = ref.watch(meProvider);
     final auth = ref.watch(authServiceProvider);
     final user = auth.currentUser;
@@ -53,22 +53,16 @@ class AccountPage extends ConsumerWidget {
       appBar: AppBar(title: const Text('Mi cuenta')),
       body: PageBody(
         children: [
-          ListTile(
-            contentPadding: EdgeInsets.zero,
-            leading: Icon(Icons.person_outline, color: scheme.onSurfaceVariant),
-            title: Text(
-              user?.displayName ?? me.value?.displayName ?? 'Tu cuenta',
-            ),
-            subtitle: Text(
-              auth.isDev
-                  ? 'Usuario de prueba (modo desarrollo)'
-                  : (user?.email ?? ''),
-            ),
+          _ProfileHeader(
+            name: user?.displayName ?? me.value?.displayName ?? 'Tu cuenta',
+            detail: auth.isDev
+                ? 'Usuario de prueba (modo desarrollo)'
+                : (user?.email ?? ''),
           ),
           const SectionTitle('Privacidad'),
           Card(
             child: ListTile(
-              leading: const Icon(Icons.privacy_tip_outlined),
+              leading: const _RowIcon(Icons.privacy_tip_outlined),
               title: const Text('Autorización de datos'),
               subtitle: Text(switch (consent) {
                 null => 'Cargando…',
@@ -83,7 +77,7 @@ class AccountPage extends ConsumerWidget {
             const SectionTitle('Veterinario'),
             Card(
               child: ListTile(
-                leading: const Icon(Icons.fact_check_outlined),
+                leading: const _RowIcon(Icons.fact_check_outlined),
                 title: const Text('Validación clínica'),
                 subtitle: const Text(
                   'Valora casos a ciegas y mira la concordancia',
@@ -96,7 +90,7 @@ class AccountPage extends ConsumerWidget {
           const SectionTitle('Sesión'),
           Card(
             child: ListTile(
-              leading: const Icon(Icons.logout),
+              leading: const _RowIcon(Icons.logout),
               title: const Text('Cerrar sesión'),
               onTap: () => ref.read(authServiceProvider).signOut(),
             ),
@@ -104,13 +98,21 @@ class AccountPage extends ConsumerWidget {
           const SizedBox(height: Spacing.sm),
           Card(
             child: ListTile(
-              leading: const Icon(Icons.delete_forever_outlined),
+              leading: const _RowIcon(Icons.delete_forever_outlined),
               title: const Text('Eliminar mi cuenta'),
               subtitle: const Text('Borra tus perros y su historial'),
               onTap: () => _deleteAccount(context, ref),
             ),
           ),
           const SectionTitle('Acerca de'),
+          Row(
+            children: [
+              const BrandLogo(size: 48),
+              const SizedBox(width: 12),
+              const BrandWordmark(size: 20),
+            ],
+          ),
+          const SizedBox(height: Spacing.sm),
           const Text(
             'MandiDog IA es un proyecto de grado de Ingeniería de Software de la Universidad '
             'Cooperativa de Colombia, sede Pasto. El análisis lo hace AI for Pet con '
@@ -130,6 +132,74 @@ class AccountPage extends ConsumerWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+/// Tarjeta del usuario con su inicial.
+class _ProfileHeader extends StatelessWidget {
+  const _ProfileHeader({required this.name, required this.detail});
+
+  final String name;
+  final String detail;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final initial = name.trim().isEmpty ? '?' : name.trim()[0].toUpperCase();
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(Spacing.md),
+        child: Row(
+          children: [
+            ExcludeSemantics(
+              child: CircleAvatar(
+                radius: 30,
+                backgroundColor: scheme.primary,
+                child: Text(
+                  initial,
+                  style: TextStyle(
+                    fontFamily: AppTheme.headingFont,
+                    fontWeight: FontWeight.w800,
+                    fontSize: 24,
+                    color: scheme.onPrimary,
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(width: Spacing.md),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(name, style: Theme.of(context).textTheme.titleLarge),
+                  if (detail.isNotEmpty)
+                    Text(
+                      detail,
+                      style: TextStyle(color: scheme.onSurfaceVariant),
+                    ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _RowIcon extends StatelessWidget {
+  const _RowIcon(this.icon);
+
+  final IconData icon;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return CircleAvatar(
+      radius: 20,
+      backgroundColor: scheme.primaryContainer,
+      child: Icon(icon, size: 20, color: scheme.primary),
     );
   }
 }

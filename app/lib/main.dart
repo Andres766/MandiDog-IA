@@ -41,8 +41,8 @@ Future<void> main() async {
 
 void _registerFontLicenses() {
   for (final (family, file) in [
-    ('Nunito Sans', 'assets/fonts/OFL-NunitoSans.txt'),
-    ('Varela Round', 'assets/fonts/OFL-VarelaRound.txt'),
+    ('Nunito', 'assets/fonts/OFL-Nunito.txt'),
+    ('DM Sans', 'assets/fonts/OFL-DMSans.txt'),
   ]) {
     LicenseRegistry.addLicense(() async* {
       yield LicenseEntryWithLineBreaks([

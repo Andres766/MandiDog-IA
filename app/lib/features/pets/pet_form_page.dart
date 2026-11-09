@@ -7,8 +7,13 @@ import '../../core/api/models.dart';
 import '../../core/providers.dart';
 import '../../core/theme/app_theme.dart';
 import '../../shared/widgets/page_body.dart';
+import '../../shared/widgets/pet_avatar.dart';
 import '../../shared/widgets/states.dart';
 import '../auth/auth_widgets.dart';
+import 'pet_widgets.dart';
+
+/// Foto elegida antes de crear el perro (todavía sin id).
+const _draftPhotoId = '_nuevo';
 
 /// Crear (sin [petId]) o editar un perro.
 class PetFormPage extends ConsumerWidget {
@@ -58,6 +63,18 @@ class _PetFormState extends ConsumerState<_PetForm> {
   String? _error;
 
   bool get _editing => widget.pet != null;
+
+  String get _photoId => widget.pet?.id ?? _draftPhotoId;
+
+  @override
+  void initState() {
+    super.initState();
+    if (!_editing) {
+      // Una foto de un formulario anterior que no se guardó no debe aparecer.
+      ref.read(petPhotoStoreProvider).delete(_draftPhotoId);
+    }
+    _name.addListener(() => setState(() {}));
+  }
 
   @override
   void dispose() {
@@ -116,6 +133,12 @@ class _PetFormState extends ConsumerState<_PetForm> {
         if (mounted) context.pop();
       } else {
         final pet = await api.createPet(data);
+        final store = ref.read(petPhotoStoreProvider);
+        final draft = await store.read(_draftPhotoId);
+        if (draft != null) {
+          await store.save(pet.id, draft);
+          await store.delete(_draftPhotoId);
+        }
         ref.invalidate(petsProvider);
         if (mounted) context.pushReplacement('/pets/${pet.id}');
       }
@@ -135,6 +158,41 @@ class _PetFormState extends ConsumerState<_PetForm> {
         key: _form,
         child: PageBody(
           children: [
+            Center(
+              child: Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  PetAvatar(
+                    petId: _photoId,
+                    name: _name.text.trim().isEmpty ? '?' : _name.text,
+                    size: 112,
+                    hero: false,
+                  ),
+                  Positioned(
+                    right: -2,
+                    bottom: -2,
+                    child: IconButton.filled(
+                      tooltip: 'Foto del perro',
+                      style: IconButton.styleFrom(
+                        side: BorderSide(
+                          color: Theme.of(context).colorScheme.surface,
+                          width: 3,
+                        ),
+                      ),
+                      icon: const Icon(Icons.photo_camera_outlined, size: 20),
+                      onPressed: () => choosePetPhoto(
+                        context,
+                        ref,
+                        petId: _photoId,
+                        hasPhoto:
+                            ref.read(petPhotoProvider(_photoId)).value != null,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: Spacing.lg),
             FormError(_error),
             TextFormField(
               controller: _name,
