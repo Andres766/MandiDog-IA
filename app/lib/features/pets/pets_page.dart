@@ -131,7 +131,11 @@ class _Greeting extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final scheme = Theme.of(context).colorScheme;
-    final name = ref.watch(meProvider).value?.displayName?.trim();
+    // El nombre de la cuenta (Google o registro) y, si no hay, el de la API.
+    final name =
+        (ref.watch(authServiceProvider).currentUser?.displayName ??
+                ref.watch(meProvider).value?.displayName)
+            ?.trim();
     final first = name == null || name.isEmpty ? null : name.split(' ').first;
     return Padding(
       padding: const EdgeInsets.only(top: Spacing.md, bottom: Spacing.lg),
