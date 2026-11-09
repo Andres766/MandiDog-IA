@@ -26,6 +26,21 @@ class FindingOut(BaseModel):
     status: Literal["normal", "abnormal", "unknown"]
 
 
+def crop_image_urls(provider_result: dict[str, Any]) -> list[str]:
+    """Recortes de la foto analizada que aloja AI for Pet (solo https, sin repetir).
+
+    No incluye los mapas de calor. Los enlaces pueden vencer: la app muestra un
+    reemplazo si no cargan.
+    """
+    urls: list[str] = []
+    symptoms = (provider_result.get("response") or {}).get("symptoms") or []
+    for symptom in symptoms:
+        url = symptom.get("cropImageUrl") if isinstance(symptom, dict) else None
+        if isinstance(url, str) and url.startswith("https://") and url not in urls:
+            urls.append(url)
+    return urls
+
+
 class AnalysisOut(BaseModel):
     analysis_id: uuid.UUID
     risk_level: RiskLevel
@@ -34,6 +49,7 @@ class AnalysisOut(BaseModel):
     sub_part: Literal["TLEFT", "TCENTER", "TRIGHT"] | None
     model_version: str
     recommendation: str
+    photo_urls: list[str]
     created_at: datetime
 
     @classmethod
@@ -46,5 +62,6 @@ class AnalysisOut(BaseModel):
             sub_part=analysis.sub_part,
             model_version=analysis.model_version,
             recommendation=analysis.recommendation,
+            photo_urls=crop_image_urls(analysis.provider_result),
             created_at=analysis.created_at,
         )

@@ -20,6 +20,7 @@ from sqlalchemy.orm import Session
 
 from app.core.errors import ConflictError, NotFoundError
 from app.models import Analysis, Pet, User, Validation, VetAssessment
+from app.schemas.analysis import crop_image_urls
 
 # Razas braquicéfalas frecuentes (comparación sin tildes ni mayúsculas).
 _BRACHYCEPHALIC = (
@@ -64,13 +65,7 @@ def ai_sees_signs(analysis: Analysis) -> bool:
 
 def _crop_urls(analysis: Analysis) -> list[str]:
     """Recortes de la foto analizada (nunca los mapas de calor, que delatan la predicción)."""
-    urls: list[str] = []
-    symptoms = (analysis.provider_result.get("response") or {}).get("symptoms") or []
-    for symptom in symptoms:
-        url = symptom.get("cropImageUrl") if isinstance(symptom, dict) else None
-        if isinstance(url, str) and url.startswith("https://") and url not in urls:
-            urls.append(url)
-    return urls
+    return crop_image_urls(analysis.provider_result)
 
 
 @dataclass(frozen=True)

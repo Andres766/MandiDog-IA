@@ -32,6 +32,11 @@ def test_registra_el_resultado_oficial_de_ejemplo(client, engine):
         {"code": "calculus", "name": "Sarro (cálculo dental)", "status": "normal"},
     ]
     assert "consulta siempre a tu veterinario" in body["recommendation"]
+    # Solo los recortes de la foto (https), no los mapas de calor.
+    assert body["photo_urls"] == [
+        "https://example.invalid/inflammation-crop.jpg",
+        "https://example.invalid/calculus-crop.jpg",
+    ]
 
     row = _row(engine, body["analysis_id"])
     assert row["provider_result"] == result  # JSON original intacto, para auditoría
